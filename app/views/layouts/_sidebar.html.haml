@@ -1,0 +1,56 @@
+%aside.app-sidebar.bg-body-secondary.shadow{"data-bs-theme" => "dark"}
+  .sidebar-brand
+    %a.brand-link{href: "../index.html"}
+      %img.brand-image.opacity-75.shadow{alt: "AdminLTE Logo", src: "../assets/img/AdminLTELogo.png"}/
+      %span.brand-text.fw-light AdminLTE 4
+  .sidebar-wrapper
+    %nav.mt-2
+      / begin::Sidebar Menu
+      %ul#navigation.nav.sidebar-menu.flex-column{"aria-label" => "Main navigation", "data-accordion" => "false", "data-lte-toggle" => "treeview", role: "navigation"}
+        %li.nav-item
+          %a.nav-link{href: "#"}
+            %i.nav-icon.bi.bi-speedometer
+            %p
+              Dashboard
+              %i.nav-arrow.bi.bi-chevron-right
+          %ul.nav.nav-treeview
+            %li.nav-item
+              %a.nav-link{href: "../index.html"}
+                %i.nav-icon.bi.bi-circle
+                %p Dashboard v1
+            %li.nav-item
+              %a.nav-link{href: "../index2.html"}
+                %i.nav-icon.bi.bi-circle
+                %p Dashboard v2
+            %li.nav-item
+              %a.nav-link{href: "../index3.html"}
+                %i.nav-icon.bi.bi-circle
+                %p Dashboard v3
+
+:javascript
+  const SELECTOR_SIDEBAR_WRAPPER = '.sidebar-wrapper';
+  const Default = {
+    scrollbarTheme: 'os-theme-light',
+    scrollbarAutoHide: 'leave',
+    scrollbarClickScroll: true,
+  };
+  document.addEventListener('DOMContentLoaded', function () {
+    const sidebarWrapper = document.querySelector(SELECTOR_SIDEBAR_WRAPPER);
+
+    // Disable OverlayScrollbars on mobile devices to prevent touch interference
+    const isMobile = window.innerWidth <= 992;
+
+    if (
+      sidebarWrapper &&
+      OverlayScrollbarsGlobal?.OverlayScrollbars !== undefined &&
+      !isMobile
+    ) {
+      OverlayScrollbarsGlobal.OverlayScrollbars(sidebarWrapper, {
+        scrollbars: {
+          theme: Default.scrollbarTheme,
+          autoHide: Default.scrollbarAutoHide,
+          clickScroll: Default.scrollbarClickScroll,
+        },
+      });
+    }
+  });

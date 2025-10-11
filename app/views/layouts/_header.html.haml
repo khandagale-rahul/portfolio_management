@@ -1,0 +1,110 @@
+%nav.app-header.navbar.navbar-expand.bg-body
+  .container-fluid
+    %ul.navbar-nav
+      %li.nav-item
+        %a.nav-link{"data-lte-toggle" => "sidebar", href: "#", role: "button"}
+          %i.bi.bi-list
+      %li.nav-item.d-none.d-md-block
+        %a.nav-link{href: "#"} Home
+      %li.nav-item.d-none.d-md-block
+        %a.nav-link{href: "#"} Contact
+    %ul.navbar-nav.ms-auto
+      %li.nav-item
+        %a.nav-link{"data-widget" => "navbar-search", href: "#", role: "button"}
+          %i.bi.bi-search
+      %li.nav-item.dropdown
+        %a.nav-link{"data-bs-toggle" => "dropdown", href: "#"}
+          %i.bi.bi-chat-text
+          %span.navbar-badge.badge.text-bg-danger 3
+        .dropdown-menu.dropdown-menu-lg.dropdown-menu-end
+          %a.dropdown-item{href: "#"}
+            .d-flex
+              .flex-shrink-0
+                %img.img-size-50.rounded-circle.me-3{alt: "User Avatar", src: "../assets/img/user1-128x128.jpg"}/
+              .flex-grow-1
+                %h3.dropdown-item-title
+                  Brad Diesel
+                  %span.float-end.fs-7.text-danger
+                    %i.bi.bi-star-fill
+                %p.fs-7 Call me whenever you can...
+                %p.fs-7.text-secondary
+                  %i.bi.bi-clock-fill.me-1
+                  4 Hours Ago
+          .dropdown-divider
+          %a.dropdown-item{href: "#"}
+            .d-flex
+              .flex-shrink-0
+                %img.img-size-50.rounded-circle.me-3{alt: "User Avatar", src: "../assets/img/user8-128x128.jpg"}/
+              .flex-grow-1
+                %h3.dropdown-item-title
+                  John Pierce
+                  %span.float-end.fs-7.text-secondary
+                    %i.bi.bi-star-fill
+                %p.fs-7 I got your message bro
+                %p.fs-7.text-secondary
+                  %i.bi.bi-clock-fill.me-1
+                  4 Hours Ago
+          .dropdown-divider
+          %a.dropdown-item{href: "#"}
+            .d-flex
+              .flex-shrink-0
+                %img.img-size-50.rounded-circle.me-3{alt: "User Avatar", src: "../assets/img/user3-128x128.jpg"}/
+              .flex-grow-1
+                %h3.dropdown-item-title
+                  Nora Silvester
+                  %span.float-end.fs-7.text-warning
+                    %i.bi.bi-star-fill
+                %p.fs-7 The subject goes here
+                %p.fs-7.text-secondary
+                  %i.bi.bi-clock-fill.me-1
+                  4 Hours Ago
+          .dropdown-divider
+          %a.dropdown-item.dropdown-footer{href: "#"} See All Messages
+      %li.nav-item.dropdown
+        %a.nav-link{"data-bs-toggle" => "dropdown", href: "#"}
+          %i.bi.bi-bell-fill
+          %span.navbar-badge.badge.text-bg-warning 15
+        .dropdown-menu.dropdown-menu-lg.dropdown-menu-end
+          %span.dropdown-item.dropdown-header 15 Notifications
+          .dropdown-divider
+          %a.dropdown-item{href: "#"}
+            %i.bi.bi-envelope.me-2
+            4 new messages
+            %span.float-end.text-secondary.fs-7 3 mins
+          .dropdown-divider
+          %a.dropdown-item{href: "#"}
+            %i.bi.bi-people-fill.me-2
+            8 friend requests
+            %span.float-end.text-secondary.fs-7 12 hours
+          .dropdown-divider
+          %a.dropdown-item{href: "#"}
+            %i.bi.bi-file-earmark-fill.me-2
+            3 new reports
+            %span.float-end.text-secondary.fs-7 2 days
+          .dropdown-divider
+          %a.dropdown-item.dropdown-footer{href: "#"} See All Notifications
+      %li.nav-item
+        %a.nav-link{"data-lte-toggle" => "fullscreen", href: "#"}
+          %i.bi.bi-arrows-fullscreen{"data-lte-icon" => "maximize"}
+          %i.bi.bi-fullscreen-exit{"data-lte-icon" => "minimize", style: "display: none"}
+            %li.nav-item.dropdown.user-menu
+              %a.nav-link.dropdown-toggle{"data-bs-toggle" => "dropdown", href: "#"}
+                %img.user-image.rounded-circle.shadow{alt: "User Image", src: "../assets/img/user2-160x160.jpg"}/
+                %span.d-none.d-md-inline Alexander Pierce
+              %ul.dropdown-menu.dropdown-menu-lg.dropdown-menu-end
+                %li.user-header.text-bg-primary
+                  %img.rounded-circle.shadow{alt: "User Image", src: "../assets/img/user2-160x160.jpg"}/
+                  %p
+                    Alexander Pierce - Web Developer
+                    %small Member since Nov. 2023
+                %li.user-body
+                  .row
+                    .col-4.text-center
+                      %a{href: "#"} Followers
+                    .col-4.text-center
+                      %a{href: "#"} Sales
+                    .col-4.text-center
+                      %a{href: "#"} Friends
+                %li.user-footer
+                  %a.btn.btn-default.btn-flat{href: "#"} Profile
+                  %a.btn.btn-default.btn-flat.float-end{href: "#"} Sign out
