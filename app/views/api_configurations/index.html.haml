@@ -1,0 +1,34 @@
+%p{style: "color: green"}= notice
+
+- content_for :title, "Api configurations"
+
+.card
+  .card-header
+    %h1 Api configurations
+    = link_to "New api configuration", new_api_configuration_path
+  .card-body
+    - if @api_configurations.empty?
+      %p No API configurations found.
+    - else
+      %div{id: "api_configurations"}
+        %table.table.table-striped.table-bordered
+          %thead
+            %tr
+              %th API Name
+              %th API Key
+              %th API Secret
+              %th Created At
+              %th Updated At
+              %th Actions
+          %tbody
+            - @api_configurations.each do |api_configuration|
+              %tr
+                %td= api_configuration.api_name&.humanize
+                %td= api_configuration.api_key
+                %td= api_configuration.api_secret
+                %td= l(api_configuration.created_at, format: :short)
+                %td= l(api_configuration.updated_at, format: :short)
+                %td
+                  = link_to "Show", api_configuration, class: "btn btn-sm btn-info"
+                  = link_to "Edit", edit_api_configuration_path(api_configuration), class: "btn btn-sm btn-warning"
+                  = link_to "Destroy", api_configuration, data: { turbo_method: :delete, turbo_confirm: "Are you sure?" }, class: "btn btn-sm btn-danger"

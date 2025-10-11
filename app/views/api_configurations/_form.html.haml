@@ -1,0 +1,26 @@
+= form_with(model: api_configuration) do |form|
+  .card-body
+    - if api_configuration.errors.any?
+      %div{style: "color: red"}
+        %ul
+          - api_configuration.errors.each do |error|
+            %li= error.full_message
+    .row
+      .input-group.mb-3
+        = form.label :api_name, "Select Broker", class: "input-group-text"
+        = form.select :api_name, ApiConfiguration.api_names.keys.map { |name| [name.humanize, name] }, { prompt: "--- Select Broker ---" }, { class: "form-control" }
+    .row
+      .input-group.mb-3
+        = form.label :api_key, "API Key", class: "input-group-text"
+        = form.text_field :api_key, required: true, autofocus: true, autocomplete: "username", placeholder: "Enter your API key", class: "form-control"
+    .row
+      .input-group
+        = form.label :api_secret, "API Secret", class: "input-group-text"
+        = form.text_field :api_secret, required: true, autocomplete: "current-password", placeholder: "Enter your API secret", class: "form-control"
+  .card-footer
+    .row
+      .col-2
+        .d-grid.gap-2
+          = form.submit "Submit", class: "btn btn-primary"
+      .col-2
+        = link_to "Back", api_configurations_path, class: "btn btn-secondary"

@@ -10,9 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_11_081050) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_11_104809) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "api_configurations", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.integer "api_name", null: false
+    t.string "api_key", null: false
+    t.string "api_secret", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["api_name"], name: "index_api_configurations_on_api_name"
+    t.index ["user_id"], name: "index_api_configurations_on_user_id"
+  end
 
   create_table "sessions", force: :cascade do |t|
     t.bigint "user_id", null: false
@@ -34,5 +45,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_11_081050) do
     t.index ["phone_number"], name: "index_users_on_phone_number", unique: true
   end
 
+  add_foreign_key "api_configurations", "users"
   add_foreign_key "sessions", "users"
 end

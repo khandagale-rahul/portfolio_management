@@ -1,0 +1,16 @@
+%div{id: dom_id(api_configuration)}
+  %p
+    %strong API Name:
+    = api_configuration.api_name&.humanize
+  %p
+    %strong API Key:
+    = api_configuration.api_key
+  %p
+    %strong API Secret:
+    = api_configuration.api_secret
+  %p
+    %strong Created At:
+    = l(api_configuration.created_at, format: :short)
+  %p
+    %strong Updated At:
+    = l(api_configuration.updated_at, format: :short)

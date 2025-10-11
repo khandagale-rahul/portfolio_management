@@ -21,8 +21,8 @@
     = javascript_importmap_tags
   %body.layout-fixed.sidebar-expand-lg.sidebar-mini.bg-body-tertiary
     .app-wrapper
-      - if Current.session.present?
+      - if current_user.present?
         = render 'layouts/header'
         = render 'layouts/sidebar'
-        %main.app-main
+        %main.app-main.p-3
           = yield

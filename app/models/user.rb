@@ -8,4 +8,6 @@ class User < ApplicationRecord
   validates :phone_number, presence: true, format: { with: /\A\+?[0-9]{10,15}\z/, message: "must be a valid phone number" }
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
+
+  has_many :api_configurations, dependent: :destroy
 end

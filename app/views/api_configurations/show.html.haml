@@ -1,0 +1,14 @@
+%p{style: "color: green"}= notice
+
+.row
+  .col-6
+    .card
+      .card-header
+        %h1 Api configuration details
+      .card-body
+        = render @api_configuration
+      .card-footer
+        %div
+          = link_to "Edit", edit_api_configuration_path(@api_configuration), class: "btn btn-sm btn-warning"
+          = link_to "Back", api_configurations_path, class: "btn btn-sm btn-secondary"
+          = link_to "Destroy", @api_configuration, data: { turbo_method: :delete, turbo_confirm: "Are you sure?" }, class: "btn btn-sm btn-danger"
