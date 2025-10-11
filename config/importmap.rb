@@ -10,3 +10,4 @@ pin_all_from "app/javascript/channels", under: "channels"
 pin "bootstrap", to: "bootstrap.min.js", preload: true
 pin "@popperjs/core", to: "popper.js", preload: true
 pin "admin_lte", to: "admin_lte.js"
+pin "adminlte_turbo", to: "adminlte_turbo.js"

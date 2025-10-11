@@ -2,5 +2,6 @@
 import "@hotwired/turbo-rails"
 import "controllers"
 import "admin_lte"
+import "adminlte_turbo"
 import "@popperjs/core"
 import "bootstrap"

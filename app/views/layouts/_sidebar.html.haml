@@ -35,29 +35,35 @@
         -#         %p Dashboard v3
 
 :javascript
-  var SELECTOR_SIDEBAR_WRAPPER = '.sidebar-wrapper';
-  var Default = {
-    scrollbarTheme: 'os-theme-light',
-    scrollbarAutoHide: 'leave',
-    scrollbarClickScroll: true,
-  };
-  document.addEventListener('DOMContentLoaded', function () {
-    var sidebarWrapper = document.querySelector(SELECTOR_SIDEBAR_WRAPPER);
+  (function() {
+    const SELECTOR_SIDEBAR_WRAPPER = '.sidebar-wrapper';
+    const Default = {
+      scrollbarTheme: 'os-theme-light',
+      scrollbarAutoHide: 'leave',
+      scrollbarClickScroll: true,
+    };
 
-    // Disable OverlayScrollbars on mobile devices to prevent touch interference
-    var isMobile = window.innerWidth <= 992;
+    function initSidebar() {
+      const sidebarWrapper = document.querySelector(SELECTOR_SIDEBAR_WRAPPER);
 
-    if (
-      sidebarWrapper &&
-      OverlayScrollbarsGlobal?.OverlayScrollbars !== undefined &&
-      !isMobile
-    ) {
-      OverlayScrollbarsGlobal.OverlayScrollbars(sidebarWrapper, {
-        scrollbars: {
-          theme: Default.scrollbarTheme,
-          autoHide: Default.scrollbarAutoHide,
-          clickScroll: Default.scrollbarClickScroll,
-        },
-      });
+      // Disable OverlayScrollbars on mobile devices to prevent touch interference
+      const isMobile = window.innerWidth <= 992;
+
+      if (
+        sidebarWrapper &&
+        OverlayScrollbarsGlobal?.OverlayScrollbars !== undefined &&
+        !isMobile
+      ) {
+        OverlayScrollbarsGlobal.OverlayScrollbars(sidebarWrapper, {
+          scrollbars: {
+            theme: Default.scrollbarTheme,
+            autoHide: Default.scrollbarAutoHide,
+            clickScroll: Default.scrollbarClickScroll,
+          },
+        });
+      }
     }
-  });
+
+    document.addEventListener('DOMContentLoaded', initSidebar);
+    document.addEventListener('turbo:load', initSidebar);
+  })();
