@@ -1,0 +1,73 @@
+.card
+  .card-header
+    .row
+      .col-12
+        .d-flex.justify-content-between.align-items-center
+          %h2 Authorization
+          = link_to "Add New Configuration", new_api_configuration_path, class: "btn btn-primary"
+  .card-body
+    - if @api_configurations.empty?
+      .row
+        .col-12
+          .alert.alert-info
+            %i.fas.fa-info-circle
+            You haven't configured any trading APIs yet.
+            = link_to "Click here to add your first configuration", new_api_configuration_path, class: "alert-link"
+    - else
+      .row
+        - @api_configurations.each do |config|
+          .col-md-4.col-lg-2.mb-4
+            .card.h-100
+              .card-header.d-flex.justify-content-between.align-items-center
+                %h5.mb-0
+                  = config.api_name.humanize
+                %span.badge.bg-primary= config.api_name.upcase
+              .card-body
+                .mb-3
+                  %strong
+                    %i.fas.fa-shield-alt
+                    OAuth Status:
+                  %span.badge.ms-2{class: config.oauth_status_badge_class}
+                    = config.oauth_status
+
+                - if config.oauth_authorized?
+                  .mb-2
+                    %small.text-muted
+                      %i.fas.fa-check-circle
+                      Authorized on
+                      = config.oauth_authorized_at.strftime("%b %d, %Y")
+
+                  - if config.token_expires_at.present?
+                    .mb-2
+                      %small{class: config.token_expired? ? 'text-danger' : 'text-muted'}
+                        %i.fas.fa-clock
+                        - if config.token_expired?
+                          Token expired on
+                        - else
+                          Token expires on
+                        = config.token_expires_at.strftime("%b %d, %Y")
+
+                - if config.requires_reauthorization?
+                  .alert.alert-warning.mt-3.mb-0
+                    %small
+                      %i.fas.fa-exclamation-triangle
+                      Authorization required to trade
+
+              .card-footer.bg-transparent
+                .d-flex.gap-2.flex-wrap
+                  - if config.requires_reauthorization?
+                    = button_to upstox_oauth_authorize_path(config), data: { turbo: false }, method: :post, class: "btn btn-success btn-sm flex-grow-1" do
+                      %i.fas.fa-link
+                      Authorize
+                  - else
+                    = button_to upstox_oauth_authorize_path(config), method: :post, class: "btn btn-outline-secondary btn-sm", data: { turbo_confirm: "Re-authorize this configuration?" } do
+                      %i.fas.fa-sync
+                      Re-authorize
+
+                  = link_to config, class: "btn btn-outline-primary btn-sm" do
+                    %i.fas.fa-eye
+                    View
+
+                  = link_to edit_api_configuration_path(config), class: "btn btn-outline-warning btn-sm" do
+                    %i.fas.fa-edit
+                    Edit

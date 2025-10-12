@@ -15,8 +15,6 @@
           %thead
             %tr
               %th API Name
-              %th API Key
-              %th API Secret
               %th Created At
               %th Updated At
               %th Actions
@@ -24,8 +22,6 @@
             - @api_configurations.each do |api_configuration|
               %tr
                 %td= api_configuration.api_name&.humanize
-                %td= api_configuration.api_key
-                %td= api_configuration.api_secret
                 %td= l(api_configuration.created_at, format: :short)
                 %td= l(api_configuration.updated_at, format: :short)
                 %td
