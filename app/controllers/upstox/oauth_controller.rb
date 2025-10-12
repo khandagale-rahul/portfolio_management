@@ -21,7 +21,7 @@ module Upstox
       @api_configuration.update(oauth_state: state)
 
       # Build authorization URL
-      authorization_url = ::UpstoxOauthService.build_authorization_url(
+      authorization_url = ::Upstox::OauthService.build_authorization_url(
         @api_configuration.api_key,
         @api_configuration.redirect_uri,
         state
@@ -51,7 +51,7 @@ module Upstox
       end
 
       # Exchange authorization code for access token
-      result = ::UpstoxOauthService.exchange_code_for_token(
+      result = ::Upstox::OauthService.exchange_code_for_token(
         @api_configuration.api_key,
         @api_configuration.api_secret,
         params[:code],

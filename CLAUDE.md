@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an **Equity Trading** Rails 8 application for managing trading API configurations across multiple brokers (Zerodha, Upstox, Angel One). The app provides user authentication and allows users to securely store and manage their trading API credentials.
+This is an **Equity Trading** Rails 8 application for managing trading API configurations across multiple brokers (Zerodha, Upstox, Angel One). The app provides user authentication, allows users to securely store and manage their trading API credentials, and implements OAuth flows for broker authorization. It also manages trading instruments (stocks, options, futures) from multiple brokers using a unified data model.
 
 ## Technology Stack
 
@@ -89,6 +89,9 @@ bin/rails console
 
 # Production console
 RAILS_ENV=production bin/rails console
+
+# Import Upstox instruments (in console)
+UpstoxInstrument.import_from_upstox(exchange: "NSE_MIS")
 ```
 
 ### Generators
@@ -108,12 +111,14 @@ bin/rails generate migration MigrationName
 ### Multi-Database Configuration
 
 The application uses a **multi-database setup**:
-- **Primary database** (PostgreSQL): Users, Sessions, API Configurations
+- **Primary database** (PostgreSQL): Users, Sessions, API Configurations, Instruments
 - **Cache database** (SQLite): Solid Cache storage at `storage/equity_cache.sqlite3`
 - **Queue database** (SQLite): Solid Queue jobs at `storage/equity_queue.sqlite3`
 - **Cable database** (SQLite): Action Cable at `storage/equity_cable.sqlite3`
 
 Each non-primary database has its own migration path (`db/cache_migrate`, `db/queue_migrate`, `db/cable_migrate`).
+
+**Time Zone**: The application is configured for "Kolkata" timezone (IST) in `config/application.rb`.
 
 ### Authentication System
 
@@ -139,13 +144,29 @@ Key methods in Authentication concern:
 - Phone validation: 10-15 digits, optional `+` prefix
 
 **ApiConfiguration** (`app/models/api_configuration.rb`):
-- Enum for `api_name`: `{ zerodha: 1, upstock: 2, angel_one: 3 }`
+- Enum for `api_name`: `{ zerodha: 1, upstox: 2, angel_one: 3 }`
 - Unique constraint: One API config per `[user_id, api_name]` combination
-- Stores encrypted credentials: `api_key` and `api_secret`
+- Stores API credentials: `api_key` and `api_secret`
+- OAuth token management: `access_token`, `token_expires_at`, `oauth_authorized_at`, `oauth_state`
+- `redirect_uri` field for OAuth callback URL
+- Helper methods for OAuth state:
+  - `oauth_authorized?` - Returns true if authorized with valid access token
+  - `token_expired?` - Checks if `token_expires_at` is in the past
+  - `requires_reauthorization?` - Returns true if not authorized or token expired
+  - `oauth_status` - Returns string: "Not Authorized", "Token Expired", or "Authorized"
+  - `oauth_status_badge_class` - Returns Bootstrap badge class for UI: "bg-secondary", "bg-danger", or "bg-success"
+  - `upstox?` - Returns true if api_name is "upstox"
 
 **Session** (`app/models/session.rb`):
 - Tracks `user_agent` and `ip_address`
 - Belongs to User
+
+**Instrument** (`app/models/instrument.rb`):
+- Base model using **Single Table Inheritance (STI)** pattern
+- Stores trading instruments: stocks, options, futures, etc.
+- Fields: `type`, `symbol`, `name`, `exchange`, `segment`, `identifier`, `tick_size`, `lot_size`
+- `raw_data` JSONB field for broker-specific metadata (indexed with GIN)
+- Subclasses: `UpstoxInstrument`, `ZerodhaInstrument`
 
 ### Routes Structure
 
@@ -153,6 +174,9 @@ Key methods in Authentication concern:
 - **Session**: Singular resource (`resource :session`) for login/logout
 - **Passwords**: Token-based password reset (`resources :passwords, param: :token`)
 - **API Configurations**: Standard CRUD (`resources :api_configurations`)
+- **Upstox OAuth**:
+  - `POST /upstox/oauth/authorize/:id` - Initiates OAuth flow
+  - `GET /upstox/oauth/callback` - Handles OAuth callback
 
 ### Generator Configuration
 
@@ -172,6 +196,32 @@ RSpec is configured as the default test framework with:
 - **Redis**: Required for Sidekiq (via `redis-client` gem)
 - **Solid Queue**: Rails 8 native queue adapter (alternative to Sidekiq)
 
+### Service Object Pattern
+
+Services are organized by broker in namespaced directories (`app/services/upstox/`, etc.). Each broker should have its own module namespace:
+
+```ruby
+module Upstox
+  class OauthService
+    # Service methods here
+  end
+end
+```
+
+**Upstox OAuth Implementation** (`app/services/upstox/oauth_service.rb`):
+- Service object pattern for OAuth operations
+- `build_authorization_url(api_key, redirect_uri, state)` - Generates OAuth URL with CSRF protection
+- `exchange_code_for_token(api_key, api_secret, code, redirect_uri)` - Exchanges auth code for access token
+- Uses Upstox API v2 endpoints: `/v2/login/authorization/dialog` and `/v2/login/authorization/token`
+- Returns structured hash with `:success`, `:access_token`, `:expires_at`, or `:error`
+
+**OAuth Controller** (`app/controllers/upstox/oauth_controller.rb`):
+- `authorize` action: Generates CSRF state token, stores in session and DB, redirects to Upstox
+- `callback` action: Verifies state token, exchanges code for token, stores credentials
+- Uses Rails session for temporary state storage during OAuth flow
+- Scoped to `current_user.api_configurations`
+- Controllers are namespaced under `app/controllers/upstox/` with module `Upstox`
+
 ### WebSocket Infrastructure
 
 - **Faye-WebSocket** + **EventMachine**: For WebSocket client connections (likely for real-time trading data)
@@ -189,8 +239,9 @@ Database configuration expects:
 ## Important Notes
 
 ### Security Considerations
-- API credentials (`api_key`, `api_secret`) are stored in plaintext in the database. Consider encrypting these with Rails encrypted attributes or a vault solution.
+- API credentials (`api_key`, `api_secret`) and OAuth tokens (`access_token`) are stored in plaintext in the database. Consider encrypting these with Rails encrypted attributes or a vault solution.
 - Sessions are database-backed, providing better security than cookie-based sessions for this financial application.
+- OAuth flow uses CSRF state tokens stored in both session and database for security.
 
 ### Testing with RSpec
 - Use FactoryBot for test data: `spec/factories/`
@@ -205,3 +256,31 @@ bin/rails generate migration CreateSomething --database=cache
 
 ### CSS Bundling
 CSS is bundled via `cssbundling-rails`. After pulling changes, run `bin/rails css:build` if styles are missing.
+
+### Single Table Inheritance (STI) Pattern
+The `Instrument` model uses STI to handle broker-specific instruments:
+- All instruments are stored in the `instruments` table
+- The `type` column determines the subclass (`UpstoxInstrument`, `ZerodhaInstrument`)
+- Use `Instrument.create(type: 'UpstoxInstrument', ...)` or `UpstoxInstrument.create(...)`
+- Query all instruments: `Instrument.all`, or specific broker: `UpstoxInstrument.all`
+
+**UpstoxInstrument** has a class method `import_from_upstox(exchange: "NSE_MIS")` that:
+- Downloads and imports instrument data from Upstox API
+- Handles gzipped JSON responses
+- Uses `find_or_initialize_by` with `identifier` (instrument_key) for upserts
+- Returns hash with `:imported`, `:skipped`, `:total` counts
+
+### Frontend & Views
+
+- **Template engine**: HAML (`.html.haml` files)
+- **Layout**: AdminLTE 3-based layout with sidebar navigation
+- **CSS Framework**: Bootstrap 5.3.3 via CDN
+- **Icons**: Bootstrap Icons and Font Awesome
+- **Hotwire**: Turbo + Stimulus for SPA-like behavior
+- **Turbo considerations**: When redirecting to external OAuth providers, disable Turbo on forms using `form: { data: { turbo: false } }` in `button_to` helpers
+
+Example of disabling Turbo on button_to:
+```haml
+= button_to path, method: :post, form: { data: { turbo: false } } do
+  Button text
+```
