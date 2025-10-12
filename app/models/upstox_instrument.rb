@@ -23,12 +23,12 @@ class UpstoxInstrument < Instrument
       instrument = UpstoxInstrument.find_or_initialize_by(
         identifier: data["instrument_key"]
       )
-      instrument.symbol = data["trading_symbol"],
-      instrument.name = data["name"],
-      instrument.exchange = data["exchange"],
-      instrument.segment = data["segment"],
-      instrument.tick_size = data["tick_size"].to_f,
-      instrument.lot_size = data["lot_size"].to_i,
+      instrument.symbol = data["trading_symbol"]
+      instrument.name = data["name"]
+      instrument.exchange = data["exchange"]
+      instrument.segment = data["segment"]
+      instrument.tick_size = data["tick_size"].to_f
+      instrument.lot_size = data["lot_size"].to_i
       instrument.raw_data = data
       if instrument.save
         imported_count += 1
