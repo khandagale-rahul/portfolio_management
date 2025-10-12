@@ -11,6 +11,10 @@
         = form.select :api_name, ApiConfiguration.api_names.keys.map { |name| [name.humanize, name] }, { prompt: "--- Select Broker ---" }, { class: "form-control" }
     .row
       .input-group.mb-3
+        = form.label :redirect_uri, "Redirect URI", class: "input-group-text"
+        = form.text_field :redirect_uri, required: true, placeholder: "Enter your redirect URI", class: "form-control"
+    .row
+      .input-group.mb-3
         = form.label :api_key, "API Key", class: "input-group-text"
         = form.text_field :api_key, required: true, autofocus: true, autocomplete: "username", placeholder: "Enter your API key", class: "form-control"
     .row

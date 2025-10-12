@@ -53,6 +53,11 @@ class ApiConfigurationsController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def api_configuration_params
-      params.require(:api_configuration).permit(:api_name, :api_key, :api_secret)
+      params.require(:api_configuration).permit(
+        :api_name,
+        :redirect_uri,
+        :api_key,
+        :api_secret
+      )
     end
 end
