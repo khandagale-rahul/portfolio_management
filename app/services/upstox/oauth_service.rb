@@ -1,7 +1,3 @@
-require "net/http"
-require "uri"
-require "json"
-
 module Upstox
   class OauthService
     AUTHORIZATION_URL = "https://api.upstox.com/v2/login/authorization/dialog"
@@ -33,8 +29,6 @@ module Upstox
       # @param redirect_uri [String] The callback URL (must match)
       # @return [Hash] Result hash with :success, :access_token, :expires_at, or :error
       def exchange_code_for_token(api_key, api_secret, code, redirect_uri)
-        uri = URI(TOKEN_URL)
-
         params = {
           code: code,
           client_id: api_key,
@@ -44,31 +38,36 @@ module Upstox
         }
 
         begin
-          response = Net::HTTP.post_form(uri, params)
+          response = RestClient::Request.execute(
+            method: :post,
+            url: TOKEN_URL,
+            payload: params,
+            timeout: 30,
+            headers: { content_type: :url_encoded_form }
+          )
 
-          if response.is_a?(Net::HTTPSuccess)
-            data = JSON.parse(response.body)
+          data = JSON.parse(response.body)
 
-            if data["access_token"]
-              {
-                success: true,
-                access_token: data["access_token"],
-                expires_at: calculate_expiry(data["expires_in"]),
-                raw_response: data
-              }
-            else
-              {
-                success: false,
-                error: data["errors"] || "Unknown error from Upstox"
-              }
-            end
+          if data["access_token"]
+            {
+              success: true,
+              access_token: data["access_token"],
+              expires_at: calculate_expiry(data["expires_in"]),
+              raw_response: data
+            }
           else
-            error_data = JSON.parse(response.body) rescue {}
             {
               success: false,
-              error: error_data["errors"] || "HTTP #{response.code}: #{response.message}"
+              error: data["errors"] || "Unknown error from Upstox"
             }
           end
+        rescue RestClient::ExceptionWithResponse => e
+          error_data = JSON.parse(e.response.body) rescue {}
+          Rails.logger.error "Upstox OAuth token exchange failed: #{e.message}"
+          {
+            success: false,
+            error: error_data["errors"] || "HTTP #{e.http_code}: #{e.message}"
+          }
         rescue StandardError => e
           Rails.logger.error "Upstox OAuth token exchange failed: #{e.message}"
           {

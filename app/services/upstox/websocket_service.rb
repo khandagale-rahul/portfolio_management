@@ -1,6 +1,3 @@
-require "net/http"
-require "uri"
-require "json"
 require "eventmachine"
 require "faye/websocket"
 require_relative "../../../lib/protobuf/upstox/MarketDataFeed_pb"
@@ -36,39 +33,38 @@ module Upstox
     end
 
     def fetch_websocket_url
-      uri = URI(AUTHORIZE_URL)
-
-      request = Net::HTTP::Get.new(uri)
-      request["Authorization"] = "Bearer #{@access_token}"
-      request["Accept"] = "application/json"
-
       begin
-        response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
-          http.request(request)
-        end
+        response = RestClient::Request.execute(
+          method: :get,
+          url: AUTHORIZE_URL,
+          timeout: 30,
+          headers: {
+            authorization: "Bearer #{@access_token}",
+            accept: "application/json"
+          }
+        )
 
-        if response.is_a?(Net::HTTPSuccess)
-          data = JSON.parse(response.body)
+        data = JSON.parse(response.body)
 
-          if data["status"] == "success" && data.dig("data", "authorized_redirect_uri")
-            @ws_url = data["data"]["authorized_redirect_uri"]
-            {
-              success: true,
-              ws_url: @ws_url
-            }
-          else
-            {
-              success: false,
-              error: data["errors"] || "Failed to get WebSocket URL"
-            }
-          end
+        if data["status"] == "success" && data.dig("data", "authorized_redirect_uri")
+          @ws_url = data["data"]["authorized_redirect_uri"]
+          {
+            success: true,
+            ws_url: @ws_url
+          }
         else
-          error_data = JSON.parse(response.body) rescue {}
           {
             success: false,
-            error: error_data["errors"] || "HTTP #{response.code}: #{response.message}"
+            error: data["errors"] || "Failed to get WebSocket URL"
           }
         end
+      rescue RestClient::ExceptionWithResponse => e
+        error_data = JSON.parse(e.response.body) rescue {}
+        Rails.logger.error "Upstox WebSocket authorization failed: #{e.message}"
+        {
+          success: false,
+          error: error_data["errors"] || "HTTP #{e.http_code}: #{e.message}"
+        }
       rescue StandardError => e
         Rails.logger.error "Upstox WebSocket authorization failed: #{e.message}"
         {

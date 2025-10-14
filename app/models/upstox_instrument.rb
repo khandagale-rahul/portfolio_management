@@ -1,19 +1,22 @@
 class UpstoxInstrument < Instrument
   def self.import_from_upstox(exchange: "NSE_MIS")
-    require "net/http"
-    require "zlib"
-    require "json"
+    url = "https://assets.upstox.com/market-quote/instruments/exchange/#{exchange}.json.gz"
 
-    url = URI("https://assets.upstox.com/market-quote/instruments/exchange/#{exchange}.json.gz")
-    response = Net::HTTP.get_response(url)
+    begin
+      response = RestClient::Request.execute(
+        method: :get,
+        url: url,
+        timeout: 40
+      )
 
-    unless response.is_a?(Net::HTTPSuccess)
-      raise "Failed to download instruments: #{response.code} #{response.message}"
+      gzip_reader = Zlib::GzipReader.new(StringIO.new(response.body))
+      json_data = gzip_reader.read
+      gzip_reader.close
+    rescue RestClient::ExceptionWithResponse => e
+      raise "Failed to download instruments: #{e.http_code} #{e.message}"
+    rescue StandardError => e
+      raise "Failed to download instruments: #{e.message}"
     end
-
-    gzip_reader = Zlib::GzipReader.new(StringIO.new(response.body))
-    json_data = gzip_reader.read
-    gzip_reader.close
 
     instruments_data = JSON.parse(json_data)
     imported_count = 0

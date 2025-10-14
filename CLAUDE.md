@@ -92,8 +92,9 @@ bin/rails console
 # Production console
 RAILS_ENV=production bin/rails console
 
-# Import Upstox instruments (in console)
+# Import instruments (in console)
 UpstoxInstrument.import_from_upstox(exchange: "NSE_MIS")
+ZerodhaInstrument.import_instruments(api_key: "your_key", access_token: "your_token")
 ```
 
 ### Background Jobs (Sidekiq)
@@ -279,6 +280,13 @@ end
 - Scoped to `current_user.api_configurations`
 - Controllers are namespaced under `app/controllers/zerodha/` with module `Zerodha`
 
+**Zerodha API Service** (`app/services/zerodha/api_service.rb`):
+- Service object for Zerodha Kite API operations
+- `instruments` - Fetches all instrument master data in CSV format
+- Requires API key and access token for authentication
+- Authorization header format: `token api_key:access_token`
+- Base URL: `https://api.kite.trade`
+
 ### Real-Time Market Data WebSocket System
 
 **Upstox WebSocket Service** ([app/services/upstox/websocket_service.rb](app/services/upstox/websocket_service.rb)):
@@ -380,6 +388,14 @@ The `Instrument` model uses STI to handle broker-specific instruments:
 - Handles gzipped JSON responses
 - Uses `find_or_initialize_by` with `identifier` (instrument_key) for upserts
 - Returns hash with `:imported`, `:skipped`, `:total` counts
+
+**ZerodhaInstrument** has a class method `import_instruments(api_key:, access_token:)` that:
+- Downloads and imports instrument data from Zerodha Kite API
+- Requires API key and valid access token (unlike Upstox which uses public endpoint)
+- Filters for NSE exchange and EQ (equity) instrument type only
+- Parses CSV response and stores in unified Instrument table
+- Uses `find_or_initialize_by` with `identifier` (instrument_token) for upserts
+- Call from console: `ZerodhaInstrument.import_instruments(api_key: "your_key", access_token: "your_token")`
 
 ### Frontend & Views
 
