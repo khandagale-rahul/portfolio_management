@@ -50,6 +50,9 @@ gem "sidekiq-cron"
 gem "faye-websocket"
 gem "eventmachine"
 
+# For Protobuf message decoding
+gem "google-protobuf"
+
 # Redis client
 gem "redis-client"
 gem "haml-rails"

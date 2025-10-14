@@ -1,0 +1,20 @@
+# Sidekiq-cron schedule for Upstox Market Data Service
+# Times are in IST (configured in config/application.rb)
+
+start_market_data:
+  cron: "0 9 * * 1-5"  # 9:00 AM Monday-Friday
+  class: "Upstox::StartWebsocketConnectionJob"
+  queue: "market_data"
+  description: "Start Upstox WebSocket market data feed at market open"
+
+stop_market_data:
+  cron: "30 15 * * 1-5"  # 3:30 PM Monday-Friday
+  class: "Upstox::StopWebsocketConnectionJob"
+  queue: "market_data"
+  description: "Stop Upstox WebSocket market data feed at market close"
+
+health_check_market_data:
+  cron: "*/5 9-15 * * 1-5"  # Every 5 minutes from 9 AM to 3 PM, Monday-Friday
+  class: "Upstox::HealthCheckWebsocketConnectionJob"
+  queue: "market_data"
+  description: "Health check to ensure market data service is running during trading hours"
