@@ -74,7 +74,7 @@ module Upstox
                 redis_client.call("SET", "upstox:market_data:status", "running")
                 redis_client.call("DEL", "upstox:market_data:error_message")
                 redis_client.call("DEL", "upstox:market_data:error_time")
-                EM.cancel_timer(connection_timeout) # Cancel timeout since we're connected
+                EM.cancel_timer(connection_timeout)
                 Rails.logger.info "[MarketData] Service running and subscribed to instruments"
               else
                 Rails.logger.warn "[MarketData] Service not connected yet, subscription deferred"
