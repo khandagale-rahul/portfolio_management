@@ -56,11 +56,11 @@
               .card-footer.bg-transparent
                 .d-flex.gap-2.flex-wrap
                   - if config.requires_reauthorization?
-                    = button_to upstox_oauth_authorize_path(config), method: :post, class: "btn btn-success btn-sm flex-grow-1", form: { data: { turbo: false } } do
+                    = button_to oauth_path_for(config), method: :post, class: "btn btn-success btn-sm flex-grow-1", form: { data: { turbo: false } } do
                       %i.fas.fa-link
                       Authorize
                   - else
-                    = button_to upstox_oauth_authorize_path(config), method: :post, class: "btn btn-outline-secondary btn-sm", form: { data: { turbo: false, turbo_confirm: "Re-authorize this configuration?" } } do
+                    = button_to oauth_path_for(config), method: :post, class: "btn btn-outline-secondary btn-sm", form: { data: { turbo: false, turbo_confirm: "Re-authorize this configuration?" } } do
                       %i.fas.fa-sync
                       Re-authorize
                   = link_to config, class: "btn btn-outline-primary btn-sm" do

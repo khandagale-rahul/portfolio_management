@@ -36,9 +36,4 @@ class ApiConfiguration < ApplicationRecord
     return "bg-danger" if token_expired?
     "bg-success"
   end
-
-  # Check if this configuration is for Upstox
-  def upstox?
-    api_name == "upstox"
-  end
 end

@@ -9,11 +9,13 @@ This is an **Equity Trading** Rails 8 application for managing trading API confi
 ## Technology Stack
 
 - **Rails**: 8.0.2+
-- **Ruby**: Version managed via project
+- **Ruby**: 3.4.5
 - **Database**: PostgreSQL (primary), SQLite3 (cache, queue, cable)
 - **Frontend**: Hotwire (Turbo + Stimulus), Bootstrap 5.3.3, HAML templates
-- **Background Jobs**: Sidekiq with Sidekiq-cron
-- **WebSocket**: Faye-WebSocket with EventMachine
+- **Background Jobs**: Sidekiq with Sidekiq-cron for scheduled tasks
+- **WebSocket**: Faye-WebSocket with EventMachine for real-time market data
+- **Message Protocol**: Google Protobuf for binary data decoding
+- **Cache/State**: Redis for WebSocket connection state management
 - **Testing**: RSpec with FactoryBot and Faker
 - **Deployment**: Kamal (Docker-based)
 
@@ -94,6 +96,30 @@ RAILS_ENV=production bin/rails console
 UpstoxInstrument.import_from_upstox(exchange: "NSE_MIS")
 ```
 
+### Background Jobs (Sidekiq)
+```bash
+# Start Sidekiq worker
+bundle exec sidekiq
+
+# Start Sidekiq with specific queue
+bundle exec sidekiq -q market_data
+
+# View Sidekiq web UI (mount in routes.rb first)
+# Visit /sidekiq in browser
+```
+
+### Redis
+```bash
+# Connect to Redis CLI
+redis-cli
+
+# Check WebSocket service status
+redis-cli GET upstox:market_data:status
+
+# View connection stats
+redis-cli GET upstox:market_data:connection_stats
+```
+
 ### Generators
 ```bash
 # Generate model
@@ -155,7 +181,6 @@ Key methods in Authentication concern:
   - `requires_reauthorization?` - Returns true if not authorized or token expired
   - `oauth_status` - Returns string: "Not Authorized", "Token Expired", or "Authorized"
   - `oauth_status_badge_class` - Returns Bootstrap badge class for UI: "bg-secondary", "bg-danger", or "bg-success"
-  - `upstox?` - Returns true if api_name is "upstox"
 
 **Session** (`app/models/session.rb`):
 - Tracks `user_agent` and `ip_address`
@@ -174,9 +199,13 @@ Key methods in Authentication concern:
 - **Session**: Singular resource (`resource :session`) for login/logout
 - **Passwords**: Token-based password reset (`resources :passwords, param: :token`)
 - **API Configurations**: Standard CRUD (`resources :api_configurations`)
+- **Instruments**: Read-only index (`resources :instruments, only: [:index]`) for viewing trading instruments
 - **Upstox OAuth**:
   - `POST /upstox/oauth/authorize/:id` - Initiates OAuth flow
   - `GET /upstox/oauth/callback` - Handles OAuth callback
+- **Zerodha OAuth**:
+  - `POST /zerodha/oauth/authorize/:id` - Initiates OAuth flow
+  - `GET /zerodha/oauth/callback` - Handles OAuth callback
 
 ### Generator Configuration
 
@@ -189,12 +218,22 @@ RSpec is configured as the default test framework with:
 - **Request specs**: Disabled
 - **Factory replacement**: FactoryBot at `spec/factories`
 
-### Background Jobs Setup
+### Background Jobs & Scheduled Tasks
 
-- **Sidekiq**: For async job processing
-- **Sidekiq-cron**: For scheduled/recurring jobs
-- **Redis**: Required for Sidekiq (via `redis-client` gem)
-- **Solid Queue**: Rails 8 native queue adapter (alternative to Sidekiq)
+**Sidekiq Configuration** ([config/initializers/sidekiq.rb](config/initializers/sidekiq.rb)):
+- Redis URL: `ENV["REDIS_URL"]` (default: `redis://localhost:6379/0`)
+- Sidekiq-cron loads schedule from [config/schedule.yml](config/schedule.yml)
+
+**Scheduled Jobs** (runs in IST timezone, Monday-Friday):
+- **Start Market Data** (`Upstox::StartWebsocketConnectionJob`): 9:00 AM - Starts WebSocket connection
+- **Stop Market Data** (`Upstox::StopWebsocketConnectionJob`): 3:30 PM - Stops WebSocket connection
+- **Health Check** (`Upstox::HealthCheckWebsocketConnectionJob`): Every 5 min (9 AM-3 PM) - Monitors service health
+
+**Job Queues**:
+- `market_data` - Real-time market data streaming jobs
+- `default` - General background jobs
+
+**Alternative**: Solid Queue is available as Rails 8 native adapter (not currently used)
 
 ### Service Object Pattern
 
@@ -215,28 +254,99 @@ end
 - Uses Upstox API v2 endpoints: `/v2/login/authorization/dialog` and `/v2/login/authorization/token`
 - Returns structured hash with `:success`, `:access_token`, `:expires_at`, or `:error`
 
-**OAuth Controller** (`app/controllers/upstox/oauth_controller.rb`):
+**Upstox OAuth Controller** (`app/controllers/upstox/oauth_controller.rb`):
 - `authorize` action: Generates CSRF state token, stores in session and DB, redirects to Upstox
 - `callback` action: Verifies state token, exchanges code for token, stores credentials
 - Uses Rails session for temporary state storage during OAuth flow
 - Scoped to `current_user.api_configurations`
 - Controllers are namespaced under `app/controllers/upstox/` with module `Upstox`
 
-### WebSocket Infrastructure
+**Zerodha OAuth Implementation** (`app/services/zerodha/oauth_service.rb`):
+- Service object pattern for OAuth operations following Kite Connect v3 API
+- `build_authorization_url(api_key, state)` - Generates Kite Connect login URL with state as redirect_params
+- `exchange_token(api_key, api_secret, request_token)` - Exchanges request_token for access token
+  - Generates SHA-256 checksum: `api_key + request_token + api_secret`
+  - POSTs to `/session/token` endpoint
+- `calculate_expiry()` - Calculates token expiry (6 AM next day IST)
+- Uses Zerodha Kite Connect API endpoints: `https://kite.zerodha.com/connect/login` and `https://api.kite.trade/session/token`
+- Returns structured hash with `:success`, `:access_token`, `:user_id`, or `:error`
+- **Important**: Zerodha access tokens expire at 6 AM IST the next day (not 24 hours)
 
-- **Faye-WebSocket** + **EventMachine**: For WebSocket client connections (likely for real-time trading data)
-- **Solid Cable**: Rails 8 database-backed Action Cable adapter
+**Zerodha OAuth Controller** (`app/controllers/zerodha/oauth_controller.rb`):
+- `authorize` action: Generates CSRF state token, stores in session and DB, redirects to Kite Connect
+- `callback` action: Verifies state token, exchanges request_token for access token, stores credentials
+- Uses Rails session for temporary state storage during OAuth flow
+- Scoped to `current_user.api_configurations`
+- Controllers are namespaced under `app/controllers/zerodha/` with module `Zerodha`
+
+### Real-Time Market Data WebSocket System
+
+**Upstox WebSocket Service** ([app/services/upstox/websocket_service.rb](app/services/upstox/websocket_service.rb)):
+- Connects to Upstox Market Data Feed v3 API for real-time trading data
+- **Authorization**: Fetches WebSocket URL via `/v3/feed/market-data-feed/authorize` endpoint
+- **Connection Management**:
+  - Auto-reconnection with exponential backoff (max 10 attempts)
+  - Heartbeat monitoring (checks every 30 seconds)
+  - Connection health tracking with automatic recovery
+  - State tracking via Redis: `upstox:market_data:status` (starting/running/stopping/stopped/error)
+- **Subscription Modes**: `ltpc` (Last Traded Price), `full`, `option_greeks`, `full_d30`
+- **Message Processing**: Binary Protobuf decoding via `lib/protobuf/upstox/MarketDataFeed_pb.rb`
+- **EventMachine**: Runs in separate thread with EM reactor loop
+
+**WebSocket Job Lifecycle** ([app/jobs/upstox/start_websocket_connection_job.rb](app/jobs/upstox/start_websocket_connection_job.rb)):
+1. Validates authorized Upstox API configuration and access token
+2. Spawns EventMachine thread with WebSocket service
+3. Subscribes to NSE instruments (from `UpstoxInstrument` table)
+4. Stores global reference in `$market_data_service` variable
+5. Monitors stop signals from Redis every 60 seconds
+
+**State Management** (Redis keys):
+- `upstox:market_data:status` - Current service state
+- `upstox:market_data:connection_stats` - JSON connection statistics
+- `upstox:market_data:last_error` / `last_error_time` - Error tracking
+- `upstox:market_data:last_connected_at` / `last_disconnected_at` - Connection history
+
+**Protobuf Message Decoding**:
+- Feed types: LTPC (Last Traded Price & Quantity), Full Feed (Market/Index), First Level with Greeks
+- Parses market depth, OHLC, option greeks, bid/ask quotes
+- Fallback to JSON/raw data if protobuf compilation unavailable
+
+**Action Cable**: Solid Cable (database-backed adapter) available for server-to-client WebSocket broadcast
 
 ### Environment Variables
 
-Database configuration expects:
+**Database** ([config/database.yml](config/database.yml)):
 - `DATABASE_USERNAME` (default: "admin")
 - `DATABASE_PASSWORD` (default: "admin")
 - `DATABASE_HOST` (default: "localhost")
 - `DATABASE_PORT` (default: "5432")
 - `RAILS_MAX_THREADS` (default: 5)
 
+**Redis** (Sidekiq & WebSocket state):
+- `REDIS_URL` (default: "redis://localhost:6379/0")
+
 ## Important Notes
+
+### Protobuf Message Compilation
+
+The WebSocket service uses Protocol Buffers for efficient binary message decoding. The compiled Ruby file is at [lib/protobuf/upstox/MarketDataFeed_pb.rb](lib/protobuf/upstox/MarketDataFeed_pb.rb).
+
+If you need to recompile from `.proto` file:
+```bash
+# Install protoc compiler first (platform-specific)
+# Then compile:
+protoc --ruby_out=lib/protobuf/upstox lib/protobuf/upstox/MarketDataFeed.proto
+```
+
+The service gracefully falls back to JSON/raw data if protobuf decoding fails, so compilation is optional but recommended for performance.
+
+### Global State Variables
+
+The application uses a global variable for WebSocket service management:
+- `$market_data_service` - Holds the active `Upstox::WebsocketService` instance
+- Created in `Upstox::StartWebsocketConnectionJob`
+- Used for subscribing/unsubscribing to instruments while service is running
+- Set to `nil` when service stops or encounters errors
 
 ### Security Considerations
 - API credentials (`api_key`, `api_secret`) and OAuth tokens (`access_token`) are stored in plaintext in the database. Consider encrypting these with Rails encrypted attributes or a vault solution.
@@ -247,6 +357,7 @@ Database configuration expects:
 - Use FactoryBot for test data: `spec/factories/`
 - Controller specs are the primary spec type enabled
 - Transaction-based fixtures are enabled for speed
+- **Note**: Test database uses only the primary PostgreSQL database (not the multi-database setup used in development/production)
 
 ### Database Migrations
 When creating migrations that affect non-primary databases, specify the migration path:

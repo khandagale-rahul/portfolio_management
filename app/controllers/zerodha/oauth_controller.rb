@@ -1,10 +1,10 @@
-module Upstox
+module Zerodha
   class OauthController < ApplicationController
     before_action :set_api_configuration, only: [ :authorize ]
 
     def authorize
-      unless @api_configuration.api_name == "upstox"
-        redirect_to root_path, alert: "OAuth is only available for Upstox configurations."
+      unless @api_configuration.api_name == "zerodha"
+        redirect_to root_path, alert: "OAuth is only available for Zerodha configurations."
         return
       end
 
@@ -15,9 +15,8 @@ module Upstox
 
       @api_configuration.update(oauth_state: state)
 
-      authorization_url = ::Upstox::OauthService.build_authorization_url(
+      authorization_url = ::Zerodha::OauthService.build_authorization_url(
         @api_configuration.api_key,
-        @api_configuration.redirect_uri,
         state
       )
 
@@ -27,13 +26,11 @@ module Upstox
     def callback
       state = params[:state]
 
-      # Verify state parameter to prevent CSRF attacks
       unless state.present? && state == session[:oauth_state]
         redirect_to root_path, alert: "Invalid OAuth state. Please try again."
         return
       end
 
-      # Retrieve the API configuration
       api_config_id = session[:oauth_api_config_id]
       @api_configuration = current_user.api_configurations.find_by(id: api_config_id)
 
@@ -42,17 +39,18 @@ module Upstox
         return
       end
 
-      result = ::Upstox::OauthService.exchange_code_for_token(
+      result = ::Zerodha::OauthService.exchange_token(
         @api_configuration.api_key,
         @api_configuration.api_secret,
-        params[:code],
-        @api_configuration.redirect_uri
+        params[:request_token]
       )
 
       if result[:success]
+        token_expires_at = ::Zerodha::OauthService.calculate_expiry
+
         @api_configuration.update(
           access_token: result[:access_token],
-          token_expires_at: result[:expires_at],
+          token_expires_at: token_expires_at,
           oauth_authorized_at: Time.current,
           oauth_state: nil
         )
@@ -60,7 +58,7 @@ module Upstox
         session.delete(:oauth_state)
         session.delete(:oauth_api_config_id)
 
-        redirect_to root_path, notice: "Successfully authorized with Upstox!"
+        redirect_to root_path, notice: "Successfully authorized with Zerodha!"
       else
         redirect_to root_path, alert: "Failed to authorize: #{result[:error]}"
       end
