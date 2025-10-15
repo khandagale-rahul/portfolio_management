@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  resources :holdings, only: [:index, :show]
   resources :instruments, only: [:index]
   resource :session
   resources :passwords, param: :token

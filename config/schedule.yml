@@ -1,4 +1,4 @@
-# Sidekiq-cron schedule for Upstox Market Data Service
+# Sidekiq-cron schedule for Upstox Market Data Service and Holdings Sync
 # Times are in IST (configured in config/application.rb)
 
 start_market_data:
@@ -18,3 +18,9 @@ health_check_market_data:
   class: "Upstox::HealthCheckWebsocketConnectionJob"
   queue: "market_data"
   description: "Health check to ensure market data service is running during trading hours"
+
+sync_zerodha_holdings:
+  cron: "0 8,16 * * 1-5"  # 8:00 AM and 4:00 PM Monday-Friday
+  class: "Zerodha::SyncHoldingsJob"
+  queue: "default"
+  description: "Sync holdings from Zerodha for all authorized users"

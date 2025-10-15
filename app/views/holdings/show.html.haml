@@ -1,0 +1,46 @@
+%p{style: "color: green"}= notice
+
+- content_for :title, "Holdings - #{@holding.broker.humanize}"
+
+.card
+  .card-header
+    %h1
+      = @holding.broker.humanize
+      Holdings
+    .text-muted
+      Last Updated:
+      = l(@holding.updated_at, format: :long)
+  .card-body
+    - if @holding.data.present? && @holding.data.any?
+      %table.table.table-striped.table-bordered.table-hover
+        %thead
+          %tr
+            %th Trading Symbol
+            %th Exchange
+            %th Quantity
+            %th Average Price
+            %th Last Price
+            %th P&L
+            %th Day Change
+            %th Day Change %
+        %tbody
+          - item = @holding.data
+          %tr
+            %td
+              %strong= item["tradingsymbol"]
+            %td= item["exchange"]
+            %td.text-end= item["quantity"]
+            %td.text-end= number_to_currency(item["average_price"], unit: "₹")
+            %td.text-end= number_to_currency(item["last_price"], unit: "₹")
+            %td.text-end{class: item["pnl"].to_f >= 0 ? "text-success" : "text-danger"}
+              = number_to_currency(item["pnl"], unit: "₹")
+            %td.text-end{class: item["day_change"].to_f >= 0 ? "text-success" : "text-danger"}
+              = number_to_currency(item["day_change"], unit: "₹")
+            %td.text-end{class: item["day_change_percentage"].to_f >= 0 ? "text-success" : "text-danger"}
+              = number_to_percentage(item["day_change_percentage"], precision: 2)
+
+    - else
+      %p.text-muted No holdings data available.
+
+.mt-3
+  = link_to "Back to holdings", holdings_path, class: "btn btn-secondary"

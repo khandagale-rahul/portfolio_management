@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_12_114412) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_15_074339) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -29,6 +29,17 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_12_114412) do
     t.index ["api_name"], name: "index_api_configurations_on_api_name"
     t.index ["user_id", "api_name"], name: "index_api_configurations_on_user_id_and_api_name", unique: true
     t.index ["user_id"], name: "index_api_configurations_on_user_id"
+  end
+
+  create_table "holdings", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.integer "broker"
+    t.string "exchange"
+    t.string "trading_symbol"
+    t.jsonb "data"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_holdings_on_user_id"
   end
 
   create_table "instruments", force: :cascade do |t|
@@ -72,5 +83,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_12_114412) do
   end
 
   add_foreign_key "api_configurations", "users"
+  add_foreign_key "holdings", "users"
   add_foreign_key "sessions", "users"
 end

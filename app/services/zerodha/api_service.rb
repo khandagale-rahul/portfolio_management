@@ -230,6 +230,26 @@ module Zerodha
       nil
     end
 
+    def get_holdings
+      url = "#{BASE_URL}/portfolio/holdings"
+
+      @response = begin
+        api_response = RestClient::Request.execute(
+          method: :get,
+          url: url,
+          timeout: 40,
+          headers: credentials.merge({ 'Content-Type': "application/json" })
+        )
+
+        JSON.parse(api_response)
+      rescue => e
+        error_message = e.http_body rescue e.message
+        { status: "failed", message: error_message }
+      end.with_indifferent_access
+
+      nil
+    end
+
     private
 
     def credentials
