@@ -7,6 +7,7 @@ class CreateInstruments < ActiveRecord::Migration[8.0]
       t.string :exchange
       t.string :segment
       t.string :identifier
+      t.string :exchange_token
       t.decimal :tick_size, precision: 10, scale: 5
       t.integer :lot_size
       t.jsonb :raw_data, default: {}

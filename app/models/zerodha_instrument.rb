@@ -20,6 +20,7 @@ class ZerodhaInstrument < Instrument
           instrument.name = row["name"]
           instrument.exchange = row["exchange"]
           instrument.segment = row["segment"]
+          instrument.exchange_token = row["exchange_token"]
           instrument.tick_size = row["tick_size"].to_f
           instrument.lot_size = row["lot_size"].to_i
           instrument.raw_data = row.to_h
