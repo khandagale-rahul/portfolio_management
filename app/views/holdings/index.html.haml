@@ -10,37 +10,37 @@
       %p No holdings found.
     - else
       %div{id: "holdings"}
-        %table.table.table-striped.table-bordered
-          %thead
-            %tr
-              %th Broker
-              %th Exchange
-              %th Trading Symbol
-              %th Last Updated
-              %th Quantity
-              %th Average Price
-              %th Last Price
-              %th P&L
-              %th Day Change
-              %th Day Change %
-              %th Actions
-          %tbody
-            - @holdings.each do |holding|
-              - item = holding.data
+        .table-responsive
+          %table.table.table-striped.table-bordered
+            %thead
               %tr
-                %td= holding.broker&.humanize
-                %td= holding.exchange
-                %td= holding.trading_symbol&.humanize
-                %td= l(holding.updated_at, format: :short)
-                %td.text-end= item["quantity"]
-                %td.text-end= number_to_currency(item["average_price"], unit: "₹")
-                %td.text-end= number_to_currency(item["last_price"], unit: "₹")
-                %td.text-end{class: item["pnl"].to_f >= 0 ? "text-success" : "text-danger"}
-                  = number_to_currency(item["pnl"], unit: "₹")
-                %td.text-end{class: item["day_change"].to_f >= 0 ? "text-success" : "text-danger"}
-                  = number_to_currency(item["day_change"], unit: "₹")
-                %td.text-end{class: item["day_change_percentage"].to_f >= 0 ? "text-success" : "text-danger"}
-                  = number_to_percentage(item["day_change_percentage"], precision: 2)
-
-                %td
-                  = link_to "Show", holding, class: "btn btn-sm btn-info"
+                %th Broker
+                %th Exchange
+                %th Trading Symbol
+                %th Last Updated
+                %th Quantity
+                %th Average Price
+                %th Last Price
+                %th P&L
+                %th Day Change
+                %th Day Change %
+                %th Actions
+            %tbody
+              - @holdings.each do |holding|
+                - item = holding.data
+                %tr
+                  %td= holding.broker&.humanize
+                  %td= holding.exchange
+                  %td= holding.trading_symbol&.humanize
+                  %td= l(holding.updated_at, format: :short)
+                  %td.text-end= item["quantity"]
+                  %td.text-end= number_to_currency(item["average_price"], unit: "₹")
+                  %td.text-end= number_to_currency(item["last_price"], unit: "₹")
+                  %td.text-end{class: item["pnl"].to_f >= 0 ? "text-success" : "text-danger"}
+                    = number_to_currency(item["pnl"], unit: "₹")
+                  %td.text-end{class: item["day_change"].to_f >= 0 ? "text-success" : "text-danger"}
+                    = number_to_currency(item["day_change"], unit: "₹")
+                  %td.text-end{class: item["day_change_percentage"].to_f >= 0 ? "text-success" : "text-danger"}
+                    = number_to_percentage(item["day_change_percentage"], precision: 2)
+                  %td
+                    = link_to "Show", holding, class: "btn btn-sm btn-info"
