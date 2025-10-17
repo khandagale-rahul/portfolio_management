@@ -55,7 +55,7 @@ module Zerodha
       end
 
       begin
-        api_service = Zeall_holdings_datarodha::ApiService.new(
+        api_service = Zerodha::ApiService.new(
           api_key: api_config.api_key,
           access_token: api_config.access_token
         )

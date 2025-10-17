@@ -81,6 +81,7 @@ group :test do
   gem "capybara"
   gem "selenium-webdriver"
   gem "shoulda-matchers", "~> 6.0"
+  gem "webmock"
 end
 
 group :development, :test do
