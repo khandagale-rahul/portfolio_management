@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an **Equity Trading** Rails 8 application for managing trading API configurations across multiple brokers (Zerodha, Upstox, Angel One). The app provides user authentication, allows users to securely store and manage their trading API credentials, and implements OAuth flows for broker authorization. It also manages trading instruments (stocks, options, futures) from multiple brokers using a unified data model.
+This is a **Portfolio Management** Rails 8 application for managing trading API configurations across multiple brokers (Zerodha, Upstox, Angel One). The app provides user authentication, allows users to securely store and manage their trading API credentials, and implements OAuth flows for broker authorization. It also manages trading instruments (stocks, options, futures) from multiple brokers using a unified data model.
 
 ## Technology Stack
 
