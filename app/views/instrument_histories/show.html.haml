@@ -1,0 +1,10 @@
+%p{style: "color: green"}= notice
+
+= render @instrument_history
+
+%div
+  = link_to "Edit this instrument history", edit_instrument_history_path(@instrument_history)
+  |
+  = link_to "Back to instrument histories", instrument_histories_path
+
+  = button_to "Destroy this instrument history", @instrument_history, method: :delete

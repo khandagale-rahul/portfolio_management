@@ -167,6 +167,7 @@ Key methods in Authentication concern:
 - `has_secure_password` for bcrypt authentication
 - `has_many :sessions, dependent: :destroy`
 - `has_many :api_configurations, dependent: :destroy`
+- `has_many :holdings, dependent: :destroy`
 - Email normalization (strip + downcase)
 - Phone validation: 10-15 digits, optional `+` prefix
 
@@ -194,6 +195,20 @@ Key methods in Authentication concern:
 - `raw_data` JSONB field for broker-specific metadata (indexed with GIN)
 - Subclasses: `UpstoxInstrument`, `ZerodhaInstrument`
 
+**MasterInstrument** (`app/models/master_instrument.rb`):
+- Links instruments across brokers by exchange and exchange_token
+- `belongs_to :zerodha_instrument` and `belongs_to :upstox_instrument` (both optional)
+- `create_from_exchange_data(instrument:, exchange:, exchange_token:)` - Creates mapping records
+
+**InstrumentHistory** (`app/models/instrument_history.rb`):
+- Historical price data for instruments
+- `belongs_to :instrument`
+
+**Holding** (`app/models/holding.rb`):
+- User portfolio holdings from brokers
+- Enum for `broker`: `{ zerodha: 1, upstox: 2, angel_one: 3 }`
+- `belongs_to :user`
+
 ### Routes Structure
 
 - **Root**: Dashboard (`dashboard#index`)
@@ -201,6 +216,8 @@ Key methods in Authentication concern:
 - **Passwords**: Token-based password reset (`resources :passwords, param: :token`)
 - **API Configurations**: Standard CRUD (`resources :api_configurations`)
 - **Instruments**: Read-only index (`resources :instruments, only: [:index]`) for viewing trading instruments
+- **Holdings**: Read-only (`resources :holdings, only: [:index, :show]`)
+- **Instrument Histories**: Full CRUD (`resources :instrument_histories`)
 - **Upstox OAuth**:
   - `POST /upstox/oauth/authorize/:id` - Initiates OAuth flow
   - `GET /upstox/oauth/callback` - Handles OAuth callback
@@ -229,6 +246,7 @@ RSpec is configured as the default test framework with:
 - **Start Market Data** (`Upstox::StartWebsocketConnectionJob`): 9:00 AM - Starts WebSocket connection
 - **Stop Market Data** (`Upstox::StopWebsocketConnectionJob`): 3:30 PM - Stops WebSocket connection
 - **Health Check** (`Upstox::HealthCheckWebsocketConnectionJob`): Every 5 min (9 AM-3 PM) - Monitors service health
+- **Sync Zerodha Holdings** (`Zerodha::SyncHoldingsJob`): 8:00 AM and 4:00 PM - Syncs holdings from Zerodha
 
 **Job Queues**:
 - `market_data` - Real-time market data streaming jobs
@@ -286,6 +304,11 @@ end
 - Requires API key and access token for authentication
 - Authorization header format: `token api_key:access_token`
 - Base URL: `https://api.kite.trade`
+
+**Zerodha Sync Holdings Service** (`app/services/zerodha/sync_holdings_service.rb`):
+- Service object for syncing user holdings from Zerodha
+- Called by `Zerodha::SyncHoldingsJob` scheduled task
+- Fetches holdings via Kite API and stores in `holdings` table
 
 ### Real-Time Market Data WebSocket System
 
@@ -387,6 +410,7 @@ The `Instrument` model uses STI to handle broker-specific instruments:
 - Downloads and imports instrument data from Upstox API
 - Handles gzipped JSON responses
 - Uses `find_or_initialize_by` with `identifier` (instrument_key) for upserts
+- Creates `MasterInstrument` mapping records automatically
 - Returns hash with `:imported`, `:skipped`, `:total` counts
 
 **ZerodhaInstrument** has a class method `import_instruments(api_key:, access_token:)` that:
@@ -395,6 +419,7 @@ The `Instrument` model uses STI to handle broker-specific instruments:
 - Filters for NSE exchange and EQ (equity) instrument type only
 - Parses CSV response and stores in unified Instrument table
 - Uses `find_or_initialize_by` with `identifier` (instrument_token) for upserts
+- Creates `MasterInstrument` mapping records automatically
 - Call from console: `ZerodhaInstrument.import_instruments(api_key: "your_key", access_token: "your_token")`
 
 ### Frontend & Views

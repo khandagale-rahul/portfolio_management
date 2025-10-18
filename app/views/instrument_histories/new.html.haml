@@ -1,0 +1,10 @@
+- content_for :title, "New instrument history"
+
+%h1 New instrument history
+
+= render "form", instrument_history: @instrument_history
+
+%br
+
+%div
+  = link_to "Back to instrument histories", instrument_histories_path

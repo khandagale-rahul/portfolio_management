@@ -24,3 +24,9 @@ sync_zerodha_holdings:
   class: "Zerodha::SyncHoldingsJob"
   queue: "default"
   description: "Sync holdings from Zerodha for all authorized users"
+
+sync_upstox_instrument_history:
+  cron: "30 16 * * 1-5"  # 4:30 PM Monday-Friday (after market close)
+  class: "Upstox::SyncInstrumentHistoryJob"
+  queue: "default"
+  description: "Sync daily historical candle data for all Upstox instruments"

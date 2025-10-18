@@ -1,0 +1,27 @@
+= form_with(model: instrument_history) do |form|
+  - if instrument_history.errors.any?
+    %div{style: "color: red"}
+      %h2= "#{pluralize(instrument_history.errors.count, "error")} prohibited this instrument_history from being saved:"
+
+      %ul
+        - instrument_history.errors.each do |error|
+          %li= error.full_message
+
+  %div
+    = form.label :instrument_id, style: "display: block"
+    = form.text_field :instrument_id
+
+  %div
+    = form.label :unit, style: "display: block"
+    = form.number_field :unit
+
+  %div
+    = form.label :interval, style: "display: block"
+    = form.number_field :interval
+
+  %div
+    = form.label :date, style: "display: block"
+    = form.datetime_field :date
+
+  %div
+    = form.submit

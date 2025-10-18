@@ -2,16 +2,15 @@ module Upstox
   class ApiService
     # Base URLs
     ASSETS_BASE_URL = "https://assets.upstox.com"
-    API_BASE_URL = "https://api.upstox.com/v2"
+    API_BASE_URL = "https://api.upstox.com/v3"
     HFT_BASE_URL = "https://api-hft.upstox.com"
 
     # Paths
     INSTRUMENTS_PATH = "/market-quote/instruments/exchange"
 
-    attr_reader :response, :api_key, :access_token
+    attr_reader :response, :access_token
 
-    def initialize(api_key: nil, access_token: nil)
-      @api_key = api_key
+    def initialize(access_token: nil)
       @access_token = access_token
     end
 
@@ -367,6 +366,93 @@ module Upstox
     end
 
     alias_method :user_equity_margins, :get_fund_margin
+
+    # ============================================
+    # HISTORICAL DATA
+    # ============================================
+
+    # Get historical candle data for an instrument
+    # params: {
+    #   instrument: UpstoxInstrument object (required) - or instrument_key string
+    #   unit: string (required) - "minutes", "hours", "days", "weeks", "months"
+    #   interval: integer (required) - Interval value:
+    #             - minutes: 1-300
+    #             - hours: 1-5
+    #             - days: 1
+    #             - weeks: 1
+    #             - months: 1
+    #   to_date: string (required) - End date in 'YYYY-MM-DD' format
+    #   from_date: string (optional) - Start date in 'YYYY-MM-DD' format
+    # }
+    #
+    # Returns candle data array with:
+    # [timestamp, open, high, low, close, volume, open_interest]
+    #
+    # Historical data availability:
+    # - Minutes/Hours: From January 2022
+    # - Days/Weeks/Months: From January 2000
+    def get_historical_candle_data(params)
+      instrument_key = params[:instrument]
+      unit = params[:unit]
+      interval = params[:interval]
+      to_date = params[:to_date]
+      from_date = params[:from_date]
+
+      # Validate unit
+      valid_units = %w[minutes hours days weeks months]
+      unless valid_units.include?(unit)
+        return {
+          status: "failed",
+          message: "Invalid unit. Must be one of: #{valid_units.join(', ')}"
+        }.with_indifferent_access
+      end
+
+      # Validate interval based on unit
+      interval_valid = case unit
+      when "minutes"
+        interval.between?(1, 300)
+      when "hours"
+        interval.between?(1, 5)
+      when "days", "weeks", "months"
+        interval == 1
+      end
+
+      unless interval_valid
+        return {
+          status: "failed",
+          message: "Invalid interval for unit '#{unit}'"
+        }.with_indifferent_access
+      end
+
+      # Build URL (URL encode instrument_key to handle special characters like |)
+      encoded_instrument_key = URI.encode_www_form_component(instrument_key)
+      url_parts = [
+        "#{API_BASE_URL}/historical-candle",
+        encoded_instrument_key,
+        unit,
+        interval,
+        to_date
+      ]
+
+      url_parts << from_date if from_date.present?
+      url = url_parts.join("/")
+
+      @response = begin
+        api_response = RestClient::Request.execute(
+          method: :get,
+          url: url,
+          timeout: 40,
+          headers: credentials.merge({ 'Content-Type': "application/json" })
+        )
+
+        JSON.parse(api_response)
+      rescue => e
+        error_message = e.http_body rescue e.message
+        { status: "failed", message: error_message }
+      end.with_indifferent_access
+
+      nil
+    end
 
     # ============================================
     # MARKET QUOTES

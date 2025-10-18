@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_15_074339) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_17_153112) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -42,6 +42,23 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_15_074339) do
     t.index ["user_id"], name: "index_holdings_on_user_id"
   end
 
+  create_table "instrument_histories", force: :cascade do |t|
+    t.bigint "master_instrument_id", null: false
+    t.integer "unit", null: false
+    t.integer "interval", null: false
+    t.datetime "date", null: false
+    t.decimal "open", precision: 15, scale: 2
+    t.decimal "high", precision: 15, scale: 2
+    t.decimal "low", precision: 15, scale: 2
+    t.decimal "close", precision: 15, scale: 2
+    t.bigint "volume"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["master_instrument_id", "unit", "interval", "date"], name: "index_instrument_histories_unique", unique: true
+    t.index ["master_instrument_id"], name: "index_instrument_histories_on_master_instrument_id"
+    t.index ["unit"], name: "index_instrument_histories_on_unit"
+  end
+
   create_table "instruments", force: :cascade do |t|
     t.string "type", null: false
     t.string "symbol"
@@ -60,6 +77,17 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_15_074339) do
     t.index ["raw_data"], name: "index_instruments_on_raw_data", using: :gin
     t.index ["symbol"], name: "index_instruments_on_symbol"
     t.index ["type"], name: "index_instruments_on_type"
+  end
+
+  create_table "master_instruments", force: :cascade do |t|
+    t.string "exchange"
+    t.string "exchange_token"
+    t.integer "zerodha_instrument_id"
+    t.integer "upstox_instrument_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["upstox_instrument_id"], name: "index_master_instruments_on_upstox_instrument_id", unique: true
+    t.index ["zerodha_instrument_id"], name: "index_master_instruments_on_zerodha_instrument_id", unique: true
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -84,5 +112,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_15_074339) do
 
   add_foreign_key "api_configurations", "users"
   add_foreign_key "holdings", "users"
+  add_foreign_key "instrument_histories", "master_instruments"
   add_foreign_key "sessions", "users"
 end

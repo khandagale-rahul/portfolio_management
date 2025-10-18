@@ -1,0 +1,13 @@
+%p{style: "color: green"}= notice
+
+- content_for :title, "Instrument histories"
+
+%h1 Instrument histories
+
+%div{id: "instrument_histories"}
+  - @instrument_histories.each do |instrument_history|
+    = render instrument_history
+    %p
+      = link_to "Show this instrument history", instrument_history
+
+= link_to "New instrument history", new_instrument_history_path

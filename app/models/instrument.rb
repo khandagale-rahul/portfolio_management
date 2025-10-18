@@ -1,14 +1,9 @@
 class Instrument < ApplicationRecord
-  has_one :upstox_instrument,
-            -> { where(type: "UpstoxInstrument") },
-            class_name: "UpstoxInstrument",
-            foreign_key: :exchange_token,
-            primary_key: :exchange_token
-  has_one :zerodha_instrument,
-          -> { where(type: "ZerodhaInstrument") },
-          class_name: "ZerodhaInstrument",
-          foreign_key: :exchange_token,
-          primary_key: :exchange_token
+  has_one :master_instrument, foreign_key: :upstox_instrument_id
+  has_one :upstox_instrument, through: :master_instrument
+  has_one :zerodha_instrument, through: :master_instrument
+
+  has_many :instrument_histories, through: :master_instrument
 
   validates :identifier, presence: true, uniqueness: { scope: :type }
   validates :symbol,
