@@ -15,9 +15,9 @@
             %i.nav-icon.bi.bi-palette
             %p API Configuration
         %li.nav-item
-          = link_to instruments_path, class: 'nav-link' do
+          = link_to instruments_path(direction: :asc, sort: :name), class: 'nav-link' do
             %i.nav-icon.bi.bi-list-ul
-            %p Instruments
+            %p Stocks
         %li.nav-item
           = link_to holdings_path, class: 'nav-link' do
             %i.nav-icon.bi.bi-briefcase

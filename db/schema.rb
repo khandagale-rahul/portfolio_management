@@ -47,10 +47,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_17_153112) do
     t.integer "unit", null: false
     t.integer "interval", null: false
     t.datetime "date", null: false
-    t.decimal "open", precision: 15, scale: 2
-    t.decimal "high", precision: 15, scale: 2
-    t.decimal "low", precision: 15, scale: 2
-    t.decimal "close", precision: 15, scale: 2
+    t.decimal "open", precision: 10, scale: 2
+    t.decimal "high", precision: 10, scale: 2
+    t.decimal "low", precision: 10, scale: 2
+    t.decimal "close", precision: 10, scale: 2
     t.bigint "volume"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -80,8 +80,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_17_153112) do
   end
 
   create_table "master_instruments", force: :cascade do |t|
+    t.string "name"
     t.string "exchange"
     t.string "exchange_token"
+    t.decimal "ltp", precision: 10, scale: 2
+    t.decimal "previous_day_ltp", precision: 10, scale: 2
     t.integer "zerodha_instrument_id"
     t.integer "upstox_instrument_id"
     t.datetime "created_at", null: false

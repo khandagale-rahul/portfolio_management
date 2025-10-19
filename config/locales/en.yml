@@ -29,3 +29,11 @@
 
 en:
   hello: "Hello world"
+  number:
+    currency:
+      format:
+        format: "%u %n" # %u for unit (symbol), %n for number
+        unit: "₹" # Rupee symbol
+        separator: "."
+        delimiter: ","
+        precision: 2

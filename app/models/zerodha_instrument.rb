@@ -29,6 +29,7 @@ class ZerodhaInstrument < Instrument
 
           if instrument.save
             MasterInstrument.create_from_exchange_data(
+              name: instrument.name,
               instrument: instrument,
               exchange: instrument.exchange,
               exchange_token: instrument.exchange_token

@@ -5,10 +5,10 @@ class CreateInstrumentHistories < ActiveRecord::Migration[8.0]
       t.integer :unit, index: true, null: false
       t.integer :interval, null: false
       t.datetime :date, null: false
-      t.decimal :open, precision: 15, scale: 2
-      t.decimal :high, precision: 15, scale: 2
-      t.decimal :low, precision: 15, scale: 2
-      t.decimal :close, precision: 15, scale: 2
+      t.decimal :open, precision: 10, scale: 2
+      t.decimal :high, precision: 10, scale: 2
+      t.decimal :low, precision: 10, scale: 2
+      t.decimal :close, precision: 10, scale: 2
       t.bigint :volume
 
       t.timestamps

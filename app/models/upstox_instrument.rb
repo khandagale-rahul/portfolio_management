@@ -31,6 +31,7 @@ class UpstoxInstrument < Instrument
 
         if instrument.save
           MasterInstrument.create_from_exchange_data(
+            name: instrument.name,
             instrument: instrument,
             exchange: instrument.exchange,
             exchange_token: instrument.exchange_token
@@ -61,6 +62,7 @@ class UpstoxInstrument < Instrument
 
     candles = upstox_api.response&.dig("data", "candles")
     return unless candles
+    return unless master_instrument
 
     candles.reverse.each do |candle_data|
       master_instrument.instrument_histories.find_or_initialize_by(
@@ -77,5 +79,27 @@ class UpstoxInstrument < Instrument
         history.save!
       end
     end
+  end
+
+  def self.update_ltps
+    UpstoxInstrument.pluck(:identifier).each_slice(100) do |slice|
+      identifiers = slice.join(",")
+      api_config = ApiConfiguration.upstox.last
+      upstox_api = Upstox::ApiService.new(access_token: api_config.access_token)
+      upstox_api.quote_ltp(instrument_keys: identifiers)
+
+      if upstox_api.response[:status] == "success"
+        upstox_api.response.dig("data")&.each do |identifier, quote_data|
+          instrument = UpstoxInstrument.find_by(symbol: identifier.split(":").last)
+          next unless instrument && quote_data
+
+          instrument.master_instrument&.update(
+            ltp: quote_data["last_price"].to_f,
+            previous_day_ltp: quote_data["cp"].to_f
+          )
+        end
+      end
+    end
+    nil
   end
 end

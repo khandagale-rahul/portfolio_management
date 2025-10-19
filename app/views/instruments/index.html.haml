@@ -2,71 +2,42 @@
   .container-fluid
     .row.mb-2
       .col-sm-6
-        %h1 Instruments
+        %h1 Stocks
       .col-sm-6
-        %ol.breadcrumb.float-sm-right
+        %ol.breadcrumb.float-end
           %li.breadcrumb-item
             = link_to "Home", root_path
-          %li.breadcrumb-item.active Instruments
+          %li.breadcrumb-item.active Stocks
 
 .content
   .container-fluid
     .row
       .col-12
-        .card.card-primary.card-outline.card-outline-tabs
-          .card-header.p-0.border-bottom-0
-            %ul.nav.nav-tabs#instruments-tabs{role: "tablist"}
-              %li.nav-item
-                %a.nav-link.active#upstox-tab{"data-bs-toggle": "tab", href: "#upstox", role: "tab", "aria-controls": "upstox", "aria-selected": "true"}
-                  Upstox Instruments
-              %li.nav-item
-                %a.nav-link#zerodha-tab{"data-bs-toggle": "tab", href: "#zerodha", role: "tab", "aria-controls": "zerodha", "aria-selected": "false"}
-                  Zerodha Instruments
+        .card.card-primary
+          -# .card-header
+            -# %h3.card-title Master Instruments
           .card-body
-            .tab-content#instruments-tabContent
-              .tab-pane.fade.show.active#upstox{role: "tabpanel", "aria-labelledby": "upstox-tab"}
-                .table-responsive
-                  %table.table.table-bordered.table-striped.table-hover
-                    %thead
+            .table-responsive
+              %table.table.table-bordered.table-striped.table-hover
+                %thead
+                  %tr
+                    %th No.
+                    %th= sortable "name", "Name"
+                    %th= sortable "exchange", "Exchange"
+                    %th= sortable "exchange_token", "Exchange Token"
+                    %th= sortable "ltp", "Last Traded Price"
+                    %th= sortable "change_percent", "Changes %"
+                %tbody
+                  - if @master_instruments.any?
+                    - @master_instruments.each.with_index do |master_instrument, index|
                       %tr
-                        %th Identifier
-                        %th Symbol
-                        %th Name
-                        %th Exchange
-                        %th Lot Size
-                    %tbody
-                      - if @upstox_instruments.any?
-                        - @upstox_instruments.each do |instrument|
-                          %tr
-                            %td= instrument.identifier
-                            %td= instrument.symbol
-                            %td= instrument.name
-                            %td= instrument.exchange
-                            %td= instrument.lot_size
-                      - else
-                        %tr
-                          %td.text-center{colspan: 5}
-                            %em No Upstox instruments found
-              .tab-pane.fade#zerodha{role: "tabpanel", "aria-labelledby": "zerodha-tab"}
-                .table-responsive
-                  %table.table.table-bordered.table-striped.table-hover
-                    %thead
-                      %tr
-                        %th Identifier
-                        %th Symbol
-                        %th Name
-                        %th Exchange
-                        %th Lot Size
-                    %tbody
-                      - if @zerodha_instruments.any?
-                        - @zerodha_instruments.each do |instrument|
-                          %tr
-                            %td= instrument.identifier
-                            %td= instrument.symbol
-                            %td= instrument.name
-                            %td= instrument.exchange
-                            %td= instrument.lot_size
-                      - else
-                        %tr
-                          %td.text-center{colspan: 5}
-                            %em No Zerodha instruments found
+                        %td= index + 1
+                        %td= master_instrument.name
+                        %td= master_instrument.exchange
+                        %td= master_instrument.exchange_token
+                        %td= display_ltp(master_instrument)
+                        %td= display_price_change(master_instrument)
+                  - else
+                    %tr
+                      %td.text-center{colspan: 6}
+                        %em No master instruments found

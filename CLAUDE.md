@@ -247,6 +247,7 @@ RSpec is configured as the default test framework with:
 - **Stop Market Data** (`Upstox::StopWebsocketConnectionJob`): 3:30 PM - Stops WebSocket connection
 - **Health Check** (`Upstox::HealthCheckWebsocketConnectionJob`): Every 5 min (9 AM-3 PM) - Monitors service health
 - **Sync Zerodha Holdings** (`Zerodha::SyncHoldingsJob`): 8:00 AM and 4:00 PM - Syncs holdings from Zerodha
+- **Sync Upstox Instrument History** (`Upstox::SyncInstrumentHistoryJob`): 4:30 PM - Syncs daily historical OHLC data after market close
 
 **Job Queues**:
 - `market_data` - Real-time market data streaming jobs
@@ -309,6 +310,39 @@ end
 - Service object for syncing user holdings from Zerodha
 - Called by `Zerodha::SyncHoldingsJob` scheduled task
 - Fetches holdings via Kite API and stores in `holdings` table
+
+**Upstox API Service** (`app/services/upstox/api_service.rb`):
+- Comprehensive service object for Upstox API v3 operations
+- **Base URLs**:
+  - Assets: `https://assets.upstox.com`
+  - API: `https://api.upstox.com/v3`
+  - HFT (High-Frequency Trading): `https://api-hft.upstox.com`
+- **Order Management**:
+  - `place_order(params)` - Place new order with auto-slicing support (via HFT endpoint)
+  - `modify_order(params)` - Modify existing order
+  - `cancel_order(params)` - Cancel order
+  - `get_order_book` / `get_all_orders` - Fetch all orders
+  - `get_order_details(order_id)` - Get specific order details
+  - `get_order_history(order_id)` - Get order modification history
+  - `get_trades` - All trades for the day
+  - `get_order_trades(order_id)` - Trades for specific order
+- **Portfolio & Positions**:
+  - `get_positions` - Current short-term positions
+  - `get_holdings` - Long-term holdings
+  - `convert_position(params)` - Convert between Intraday/Delivery/MTF
+- **User & Margins**:
+  - `get_profile` - User profile details
+  - `get_fund_margin(segment:)` / `user_equity_margins` - Funds and margin details
+- **Historical Data**:
+  - `get_historical_candle_data(params)` - OHLC candle data
+    - Supports: minutes (1-300), hours (1-5), days, weeks, months
+    - Historical availability: Intraday from Jan 2022, Daily from Jan 2000
+- **Market Quotes**:
+  - `quote_ltp(params)` - Last Traded Price
+  - `quote(params)` - Full market quote
+  - `get_ohlc(params)` - OHLC data for intervals
+- All methods store response in `@response` instance variable
+- Requires access token for authentication (except instrument downloads)
 
 ### Real-Time Market Data WebSocket System
 
@@ -412,6 +446,13 @@ The `Instrument` model uses STI to handle broker-specific instruments:
 - Uses `find_or_initialize_by` with `identifier` (instrument_key) for upserts
 - Creates `MasterInstrument` mapping records automatically
 - Returns hash with `:imported`, `:skipped`, `:total` counts
+
+**UpstoxInstrument** also has an instance method `create_instrument_history(params)`:
+- Fetches and stores historical OHLC candle data for the instrument
+- Parameters: `unit` (day/minute/hour/week/month), `interval`, `from_date`, `to_date`
+- Stores data in `InstrumentHistory` via `MasterInstrument` association
+- Uses `find_or_initialize_by` with `unit`, `interval`, `date` for upserts
+- Requires authorized Upstox API configuration
 
 **ZerodhaInstrument** has a class method `import_instruments(api_key:, access_token:)` that:
 - Downloads and imports instrument data from Zerodha Kite API
