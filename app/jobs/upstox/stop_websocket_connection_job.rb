@@ -1,16 +1,19 @@
 module Upstox
   class StopWebsocketConnectionJob < ApplicationJob
+    include JobLogger
+
     queue_as :market_data
 
     def perform
-      Rails.logger.info "[MarketData] Stopping market data service at #{Time.current}"
+      setup_job_logger
+      log_info "[MarketData] Stopping market data service at #{Time.current}"
 
       redis_client.call("SET", "upstox:market_data:status", "stopping")
 
       30.times do
         status = redis_client.call("GET", "upstox:market_data:status")
         if status == "stopped"
-          Rails.logger.info "[MarketData] Service stopped gracefully"
+          log_info "[MarketData] Service stopped gracefully"
           cleanup_redis_keys
           return
         end
@@ -18,7 +21,7 @@ module Upstox
         sleep 1
       end
 
-      Rails.logger.warn "[MarketData] Service did not stop gracefully, forcing cleanup"
+      log_warn "[MarketData] Service did not stop gracefully, forcing cleanup"
       force_stop
       cleanup_redis_keys
     end
@@ -34,15 +37,15 @@ module Upstox
         begin
           $market_data_service.disconnect
           $market_data_service = nil
-          Rails.logger.info "[MarketData] Forced disconnection completed"
+          log_info "[MarketData] Forced disconnection completed"
         rescue StandardError => e
-          Rails.logger.error "[MarketData] Error during forced stop: #{e.message}"
+          log_error "[MarketData] Error during forced stop: #{e.message}"
         end
       end
 
       if EM.reactor_running?
         EM.stop
-        Rails.logger.info "[MarketData] EventMachine reactor stopped"
+        log_info "[MarketData] EventMachine reactor stopped"
       end
 
       redis_client.call("SET", "upstox:market_data:status", "stopped")
@@ -50,7 +53,7 @@ module Upstox
 
     def cleanup_redis_keys
       redis_client.call("DEL", "upstox:market_data:status")
-      Rails.logger.info "[MarketData] Redis keys cleaned up"
+      log_info "[MarketData] Redis keys cleaned up"
     end
   end
 end

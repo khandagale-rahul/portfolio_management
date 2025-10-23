@@ -1,24 +1,27 @@
 module Upstox
   class HealthCheckWebsocketConnectionJob < ApplicationJob
+    include JobLogger
+
     queue_as :market_data
 
     def perform
+      setup_job_logger
       current_time = Time.current
 
       return unless trading_hours?(current_time)
 
-      Rails.logger.info "[MarketData] Health check running at #{current_time}"
+      log_info "[MarketData] Health check running at #{current_time}"
 
       status = redis_client.call("GET", "upstox:market_data:status")
 
       if should_be_running?(status)
-        Rails.logger.warn "[MarketData] Service should be running but status is '#{status}'. Restarting..."
+        log_warn "[MarketData] Service should be running but status is '#{status}'. Restarting..."
         restart_service
       else
         if status == "running"
           check_service_health
         else
-          Rails.logger.info "[MarketData] Service status: #{status || 'not started'}"
+          log_info "[MarketData] Service status: #{status || 'not started'}"
         end
       end
     end
@@ -43,7 +46,7 @@ module Upstox
     end
 
     def restart_service
-      Rails.logger.info "[MarketData] Attempting to restart service..."
+      log_info "[MarketData] Attempting to restart service..."
 
       Upstox::StartWebsocketConnectionJob.perform_now
 
@@ -51,21 +54,21 @@ module Upstox
 
       new_status = redis_client.call("GET", "upstox:market_data:status")
       if new_status == "running" || new_status == "starting"
-        Rails.logger.info "[MarketData] Service restarted successfully. Status: #{new_status}"
+        log_info "[MarketData] Service restarted successfully. Status: #{new_status}"
       else
-        Rails.logger.error "[MarketData] Service restart failed. Status: #{new_status}"
+        log_error "[MarketData] Service restart failed. Status: #{new_status}"
       end
     end
 
     def check_service_health
       unless defined?($market_data_service) && $market_data_service
-        Rails.logger.warn "[MarketData] Status is 'running' but service instance not found. Restarting..."
+        log_warn "[MarketData] Status is 'running' but service instance not found. Restarting..."
         restart_service
         return
       end
 
       unless $market_data_service.connected?
-        Rails.logger.warn "[MarketData] Service instance exists but not connected. Connection may be recovering..."
+        log_warn "[MarketData] Service instance exists but not connected. Connection may be recovering..."
 
         stats_json = redis_client.call("GET", "upstox:market_data:connection_stats")
         if stats_json
@@ -73,10 +76,10 @@ module Upstox
           reconnect_attempts = stats[:reconnect_attempts] || 0
 
           if reconnect_attempts >= 5
-            Rails.logger.error "[MarketData] Service has #{reconnect_attempts} reconnect attempts. Forcing restart..."
+            log_error "[MarketData] Service has #{reconnect_attempts} reconnect attempts. Forcing restart..."
             restart_service
           else
-            Rails.logger.info "[MarketData] Service attempting reconnection (#{reconnect_attempts} attempts). Waiting..."
+            log_info "[MarketData] Service attempting reconnection (#{reconnect_attempts} attempts). Waiting..."
           end
         end
         return
@@ -86,10 +89,10 @@ module Upstox
       seconds_since_last_msg = stats[:seconds_since_last_message]
 
       if seconds_since_last_msg && seconds_since_last_msg > 300
-        Rails.logger.error "[MarketData] No messages received for #{seconds_since_last_msg} seconds. Service may be stuck. Restarting..."
+        log_error "[MarketData] No messages received for #{seconds_since_last_msg} seconds. Service may be stuck. Restarting..."
         restart_service
       else
-        Rails.logger.info "[MarketData] Service is healthy. Last message: #{seconds_since_last_msg}s ago"
+        log_info "[MarketData] Service is healthy. Last message: #{seconds_since_last_msg}s ago"
       end
     end
   end

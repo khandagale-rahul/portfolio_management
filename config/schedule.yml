@@ -30,3 +30,9 @@ sync_upstox_instrument_history:
   class: "Upstox::SyncInstrumentHistoryJob"
   queue: "default"
   description: "Sync daily historical candle data for all Upstox instruments"
+
+cleanup_job_logs:
+  cron: "0 8 * * *"  # 8:00 AM daily
+  class: "CleanupJobLogsJob"
+  queue: "default"
+  description: "Clean up old job log files (older than 7 days) using rake task"

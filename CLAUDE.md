@@ -97,6 +97,38 @@ UpstoxInstrument.import_from_upstox(exchange: "NSE_MIS")
 ZerodhaInstrument.import_instruments(api_key: "your_key", access_token: "your_token")
 ```
 
+### Rake Tasks
+
+#### Market Data Operations
+```bash
+# Start market data service manually
+bin/rails market_data:start
+
+# Stop market data service manually
+bin/rails market_data:stop
+
+# Check market data service status
+bin/rails market_data:status
+
+# Run health check manually
+bin/rails market_data:health_check
+
+# View scheduled cron jobs
+bin/rails market_data:scheduled
+```
+
+#### Job Log Management
+```bash
+# List all job log files with sizes and dates
+bin/rails job_logs:list
+
+# Clean up job logs older than N days (default: 7)
+bin/rails job_logs:cleanup[7]
+
+# Archive (compress) old job logs
+bin/rails job_logs:archive[7]
+```
+
 ### Background Jobs (Sidekiq)
 ```bash
 # Start Sidekiq worker
@@ -248,12 +280,36 @@ RSpec is configured as the default test framework with:
 - **Health Check** (`Upstox::HealthCheckWebsocketConnectionJob`): Every 5 min (9 AM-3 PM) - Monitors service health
 - **Sync Zerodha Holdings** (`Zerodha::SyncHoldingsJob`): 8:00 AM and 4:00 PM - Syncs holdings from Zerodha
 - **Sync Upstox Instrument History** (`Upstox::SyncInstrumentHistoryJob`): 4:30 PM - Syncs daily historical OHLC data after market close
+- **Cleanup Job Logs** (`CleanupJobLogsJob`): 8:00 AM daily - Removes job log files older than 7 days
 
 **Job Queues**:
 - `market_data` - Real-time market data streaming jobs
 - `default` - General background jobs
 
 **Alternative**: Solid Queue is available as Rails 8 native adapter (not currently used)
+
+**JobLogger Concern** (`app/jobs/concerns/job_logger.rb`):
+- Shared concern for all background jobs to enable structured logging
+- Creates separate log files per job in `log/jobs/` directory
+- Jobs include this module and call `setup_job_logger` in `perform` method
+- Provides convenience methods: `log_info`, `log_warn`, `log_error`, `log_debug`
+- Log files are named after the job class: `upstox_start_websocket_connection_job.log`
+- Daily rotation enabled automatically
+- Logs are cleaned up by `CleanupJobLogsJob` after 7 days
+
+Example usage:
+```ruby
+class MyJob < ApplicationJob
+  include JobLogger
+
+  def perform
+    setup_job_logger
+    log_info "Job started at #{Time.current}"
+    # ... job logic ...
+    log_info "Job completed successfully"
+  end
+end
+```
 
 ### Service Object Pattern
 

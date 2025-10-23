@@ -1,22 +1,25 @@
 module Upstox
   class StartWebsocketConnectionJob < ApplicationJob
+    include JobLogger
+
     queue_as :market_data
 
     def perform
-      Rails.logger.info "[MarketData] Starting market data service at #{Time.current}"
+      setup_job_logger
+      log_info "[MarketData] Starting market data service at #{Time.current}"
 
       api_config = ApiConfiguration.where(api_name: :upstox)
                                     .find_by("oauth_authorized_at IS NOT NULL AND access_token IS NOT NULL")
 
       unless api_config
-        Rails.logger.error "[MarketData] No authorized Upstox API configuration found"
+        log_error "[MarketData] No authorized Upstox API configuration found"
         redis_client.call("SET", "upstox:market_data:status", "error")
         redis_client.call("SET", "upstox:market_data:error_message", "No authorized API configuration found")
         return
       end
 
       if api_config.token_expired?
-        Rails.logger.error "[MarketData] Access token expired for API config #{api_config.id}"
+        log_error "[MarketData] Access token expired for API config #{api_config.id}"
         redis_client.call("SET", "upstox:market_data:status", "error")
         redis_client.call("SET", "upstox:market_data:error_message", "Access token expired")
         return
@@ -33,7 +36,7 @@ module Upstox
           end
 
           service.on_error do |error|
-            Rails.logger.error "[MarketData] WebSocket error: #{error}"
+            log_error "[MarketData] WebSocket error: #{error}"
             redis_client.call("SET", "upstox:market_data:last_error", error.to_s)
             redis_client.call("SET", "upstox:market_data:last_error_time", Time.current.to_i.to_s)
 
@@ -44,13 +47,13 @@ module Upstox
           end
 
           service.on_connect do
-            Rails.logger.info "[MarketData] Connected successfully"
+            log_info "[MarketData] Connected successfully"
             redis_client.call("SET", "upstox:market_data:last_connected_at", Time.current.to_i.to_s)
             redis_client.call("SET", "upstox:market_data:reconnect_count", service.connection_stats[:reconnect_attempts].to_s)
           end
 
           service.on_disconnect do |code, reason|
-            Rails.logger.warn "[MarketData] Disconnected: code=#{code}, reason=#{reason}"
+            log_warn "[MarketData] Disconnected: code=#{code}, reason=#{reason}"
             redis_client.call("SET", "upstox:market_data:last_disconnected_at", Time.current.to_i.to_s)
           end
 
@@ -61,7 +64,7 @@ module Upstox
 
             connection_timeout = EM.add_timer(30) do
               unless service.connected?
-                Rails.logger.error "[MarketData] Connection timeout - failed to connect within 30 seconds"
+                log_error "[MarketData] Connection timeout - failed to connect within 30 seconds"
                 redis_client.call("SET", "upstox:market_data:status", "error")
                 redis_client.call("SET", "upstox:market_data:error_message", "Connection timeout")
                 redis_client.call("SET", "upstox:market_data:error_time", Time.current.to_i.to_s)
@@ -75,21 +78,21 @@ module Upstox
                 redis_client.call("DEL", "upstox:market_data:error_message")
                 redis_client.call("DEL", "upstox:market_data:error_time")
                 EM.cancel_timer(connection_timeout)
-                Rails.logger.info "[MarketData] Service running and subscribed to instruments"
+                log_info "[MarketData] Service running and subscribed to instruments"
               else
-                Rails.logger.warn "[MarketData] Service not connected yet, subscription deferred"
+                log_warn "[MarketData] Service not connected yet, subscription deferred"
               end
             end
 
             EM.add_periodic_timer(60) do
               status = redis_client.call("GET", "upstox:market_data:status")
               if status == "stopping"
-                Rails.logger.info "[MarketData] Received stop signal, disconnecting..."
+                log_info "[MarketData] Received stop signal, disconnecting..."
                 service.disconnect
                 EM.stop
               else
                 stats = service.connection_stats
-                Rails.logger.info "[MarketData] Stats: connected=#{stats[:connected]}, " \
+                log_info "[MarketData] Stats: connected=#{stats[:connected]}, " \
                                   "subscriptions=#{stats[:subscriptions_count]}, " \
                                   "reconnect_attempts=#{stats[:reconnect_attempts]}, " \
                                   "seconds_since_msg=#{stats[:seconds_since_last_message]}"
@@ -99,12 +102,12 @@ module Upstox
             end
           end
 
-          Rails.logger.info "[MarketData] EventMachine reactor stopped"
+          log_info "[MarketData] EventMachine reactor stopped"
           redis_client.call("SET", "upstox:market_data:status", "stopped")
           $market_data_service = nil
         rescue StandardError => e
-          Rails.logger.error "[MarketData] Error in market data service: #{e.message}"
-          Rails.logger.error e.backtrace.join("\n")
+          log_error "[MarketData] Error in market data service: #{e.message}"
+          log_error e.backtrace.join("\n")
           redis_client.call("SET", "upstox:market_data:status", "error")
           redis_client.call("SET", "upstox:market_data:error_message", e.message)
           redis_client.call("SET", "upstox:market_data:error_time", Time.current.to_i.to_s)
@@ -112,7 +115,7 @@ module Upstox
         end
       end
 
-      Rails.logger.info "[MarketData] Market data service thread started"
+      log_info "[MarketData] Market data service thread started"
     end
 
     private
@@ -122,7 +125,7 @@ module Upstox
     end
 
     def handle_market_data(data)
-      Rails.logger.debug "[MarketData] Received data: #{data.inspect}"
+      log_debug "[MarketData] Received data: #{data.inspect}"
 
       # Example: Broadcast to ActionCable (if you have a channel set up)
       # ActionCable.server.broadcast("market_data_channel", data)
@@ -136,9 +139,9 @@ module Upstox
 
       if instruments.any?
         service.subscribe(instruments, "ltpc")
-        Rails.logger.info "[MarketData] Subscribed to #{instruments.count} instruments"
+        log_info "[MarketData] Subscribed to #{instruments.count} instruments"
       else
-        Rails.logger.warn "[MarketData] No instruments found to subscribe"
+        log_warn "[MarketData] No instruments found to subscribe"
       end
     end
   end
